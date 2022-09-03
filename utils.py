@@ -152,7 +152,7 @@ def generate_1_pipe(X, y, generations, population_size, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         train_size=0.75, test_size=0.25,
                                                         shuffle=False)
-    cachedir = 'C:\\Downloads\\tpot_cache' if system == 'windows' else 'Users/Gary/Documents/tpot_cache'
+    cachedir = 'C:\\Downloads\\tpot_cache' if system == 'windows' else '~/Documents/tpot_cache'
     memory = Memory(location=cachedir, verbose=0)
     pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=5,
                                        # TODO: 这里都有什么方法呢？

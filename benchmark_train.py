@@ -5,7 +5,6 @@
 import datetime
 import utils
 
-
 # Configuration
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 ## 原始数据文件是否已经更新
@@ -30,6 +29,6 @@ if separate_y:
     i = 0
     for yi_ind, yi in y.iteritems():
         utils.generate_1_pipe(X, yi, generations, population_size, i)
+        i += 1
 else:
     utils.generate_1_pipe(X, y, generations, population_size)
-
