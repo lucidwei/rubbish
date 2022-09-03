@@ -15,7 +15,7 @@ PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 ## 原始数据文件是否已经更新
 if_update = False
 ## 是否使用缓存的数据
-use_cache = True
+use_cache = False
 align_to = 'month'
 begT='2005-01'
 endT=datetime.date.today()

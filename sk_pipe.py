@@ -253,7 +253,7 @@ class SeriesToSupervised(BaseEstimator):
         dfs, col_names = list(), list()
         # input sequence (t-n, ... t-1)
         x_df = X.copy()
-        for i in range(self.n_in - 1, -1, -1):
+        for i in range(self.n_in, 0, -1):
             dfs.append(x_df.shift(i))
             col_names += [('var%d(t-%d)' % (j + 1, i) + x_df.columns.values[j]) for j in range(x_df.shape[1])]
         X = pd.concat(dfs, axis=1)
