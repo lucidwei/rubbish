@@ -146,7 +146,7 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
     return X, y
 
 
-def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):
+def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir, tpot_config=None, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         train_size=0.8, test_size=0.2,
                                                         shuffle=False)
@@ -154,9 +154,10 @@ def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir,
     cv = TimeSeriesSplit()
     pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=cv,
                                        # TODO: 这里都有什么方法，可以挑选一下
-                                       template='Selector-Transformer-Regressor',
+                                       template='SelectFromModel-Transformer-Regressor',
                                        scoring='r2',
-                                       early_stop=3,
+                                       early_stop=4,
+                                       config_dict=tpot_config,
                                        max_time_mins=max_time_mins,
                                        memory=memory,
                                        warm_start=True,
