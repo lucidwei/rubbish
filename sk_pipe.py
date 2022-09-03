@@ -178,9 +178,9 @@ class GetStationary(BaseEstimator, TransformerMixin):
             if record[col_ind] != 'stationary' and self.info.loc[ori_id, '单位'] != '%':
                 stl = STL(col.dropna(), period=12)
                 decomposed = stl.fit()
-                # TODO:高优先级 放在原数据边上
-                df[col_ind + '_trend'] = decomposed.trend
-                df[col_ind + '_resid'] = decomposed.resid
+                df.insert(df.columns.get_loc(col_ind)+1, column=col_ind + '_trend', value=decomposed.trend)
+                df.insert(df.columns.get_loc(col_ind)+2, column=col_ind + '_resid', value=decomposed.resid)
+                df = df.copy()
                 # 按理说应该drop，但万一原始数据也有用呢
                 # df.drop(col_ind, inplace=True, axis=1)
         df.fillna(method='bfill', inplace=True)
