@@ -3,16 +3,14 @@
 # 2022/8/16   当前系统日期
 # 14:47   当前系统时间
 # PyCharm   创建文件的IDE名称
-import pickle, warnings, os.path
-import numpy as np
+import pickle, os.path, platform
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
-from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.stattools import adfuller, kpss
+from tpot import TPOTRegressor
+from joblib import Memory
+from shutil import rmtree
 import pipe_preproc
-
 
 # 针对wind excel数据复用
 # minor warning: wind下载的自定义合成指标没有完整的指标ID，列名有极小的概率重叠，其或造成feature丢失。8月19日版本数据暂无此问题。
@@ -145,3 +143,27 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
         print('pickle loaded')
 
     return X, y
+
+
+system = platform.system().lower()
+
+
+def generate_1_pipe(X, y, generations, population_size, pipe_num=None):
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                        train_size=0.75, test_size=0.25,
+                                                        shuffle=False)
+    cachedir = 'C:\\Downloads\\tpot_cache' if system == 'windows' else 'Users/Gary/Documents/tpot_cache'
+    memory = Memory(location=cachedir, verbose=0)
+    pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=5,
+                                       # TODO: 这里都有什么方法呢？
+                                       template='Selector-Transformer-Regressor',
+                                       scoring='r2',
+                                       memory=memory,
+                                       random_state=1996, verbosity=2)
+    pipeline_optimizer.fit(X_train, y_train)
+    print(pipeline_optimizer.score(X_test, y_test))
+    if pipe_num is None:
+        pipeline_optimizer.export('./tpot_gen/multioutput_tpotpipe.py')
+    else:
+        pipeline_optimizer.export('./tpot_gen/separate_tpotpipe%d.py' % pipe_num)
+    rmtree(cachedir)
