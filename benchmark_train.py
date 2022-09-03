@@ -9,7 +9,9 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from tpot import TPOTRegressor
+from tempfile import mkdtemp
 from joblib import Memory
+from shutil import rmtree
 
 # Configuration
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
@@ -60,11 +62,17 @@ else:
 
 X_train, X_test, y_train, y_test = train_test_split(X, y.iloc[:, 0],
                                                     train_size=0.75, test_size=0.25)
-# memory = Memory(location='./tpot_cache', verbose=0)
-pipeline_optimizer = TPOTRegressor(generations=10, population_size=3, cv=5,
-                                   # template='Selector-Transformer-Classifier',
-                                   # memory=memory,
+cachedir = 'C:\\Downloads\\tpot_cache'
+# cachedir = mkdtemp()
+memory = Memory(location=cachedir, verbose=0)
+pipeline_optimizer = TPOTRegressor(generations=1, population_size=2, cv=5,
+                                   # TODO: 这里吧都有什么方法呢？
+                                   template='Selector-Transformer-Regressor',
+                                   memory=memory,
                                    random_state=1996, verbosity=2)
+
 pipeline_optimizer.fit(X_train, y_train)
 print(pipeline_optimizer.score(X_test, y_test))
 pipeline_optimizer.export('./tpot_gen/trial_pipeline2.py')
+
+rmtree(cachedir)
