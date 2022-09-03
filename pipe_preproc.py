@@ -176,7 +176,7 @@ class GetStationary(BaseEstimator, TransformerMixin):
             # 非稳态且单位非'%'才进行操作
             ori_id = get_ori_id(col_ind)
             if record[col_ind] != 'stationary' and self.info.loc[ori_id, '单位'] != '%':
-                stl = STL(col.dropna(), period=12)
+                stl = STL(col.dropna(), period=12, robust=True)
                 decomposed = stl.fit()
                 df.insert(df.columns.get_loc(col_ind)+1, column=col_ind + '_trend', value=decomposed.trend)
                 df.insert(df.columns.get_loc(col_ind)+2, column=col_ind + '_resid', value=decomposed.resid)
