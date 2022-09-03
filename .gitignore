@@ -1,7 +1,8 @@
 /EDA.ipynb
-/.ipynb_checkpoints/EDA-checkpoint.ipynb
+/.ipynb_checkpoints
 /pipeline_son.py
 /playground.py
-/tpot_gen/trial_pipeline.py
-/tpot_gen/trial_pipeline1.py
 /data/~$to_month_table.xlsx
+/tpot_gen/trial_pipeline3.py
+/tpot_gen
+/abandoned
