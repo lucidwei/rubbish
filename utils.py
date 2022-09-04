@@ -4,13 +4,14 @@
 # 14:47   当前系统时间
 # PyCharm   创建文件的IDE名称
 import pickle, os.path, platform
+from os.path import abspath
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 from tpot import TPOTRegressor
 from joblib import Memory
-from shutil import rmtree
 import pipe_preproc
+
 
 # 针对wind excel数据复用
 # minor warning: wind下载的自定义合成指标没有完整的指标ID，列名有极小的概率重叠，其或造成feature丢失。8月19日版本数据暂无此问题。
@@ -145,25 +146,27 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
     return X, y
 
 
-system = platform.system().lower()
-
-
-def generate_1_pipe(X, y, generations, population_size, pipe_num=None):
+def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        train_size=0.75, test_size=0.25,
+                                                        train_size=0.8, test_size=0.2,
                                                         shuffle=False)
-    cachedir = 'C:\\Downloads\\tpot_cache' if system == 'windows' else '~/Documents/tpot_cache'
-    memory = Memory(location=cachedir, verbose=0)
-    pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=5,
-                                       # TODO: 这里都有什么方法呢？
+    memory = Memory(location=cachedir, verbose=1)
+    cv = TimeSeriesSplit()
+    pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=cv,
+                                       # TODO: 这里都有什么方法，可以挑选一下
                                        template='Selector-Transformer-Regressor',
                                        scoring='r2',
+                                       early_stop=3,
+                                       max_time_mins=max_time_mins,
                                        memory=memory,
-                                       random_state=1996, verbosity=2)
+                                       warm_start=True,
+                                       periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
+                                       log_file=abspath('../../Documents/tpot_log/log'+str(pipe_num)),
+                                       random_state=1996, verbosity=3)
     pipeline_optimizer.fit(X_train, y_train)
-    print(pipeline_optimizer.score(X_test, y_test))
+    print('A pipe finised, score(X_test, y_test):',pipeline_optimizer.score(X_test, y_test))
     if pipe_num is None:
         pipeline_optimizer.export('./tpot_gen/multioutput_tpotpipe.py')
     else:
         pipeline_optimizer.export('./tpot_gen/separate_tpotpipe%d.py' % pipe_num)
-    rmtree(cachedir)
+
