@@ -179,6 +179,7 @@ class GetStationary(BaseEstimator, TransformerMixin):
                 stl = STL(col.dropna(), period=12, robust=True)
                 decomposed = stl.fit()
                 df.insert(df.columns.get_loc(col_ind)+1, column=col_ind + '_trend', value=decomposed.trend)
+                # TODO: 低优先级 可能需要处理个别数据的outliers
                 df.insert(df.columns.get_loc(col_ind)+2, column=col_ind + '_resid', value=decomposed.resid)
                 df = df.copy()
                 # 按理说应该drop，但万一原始数据也有用呢
