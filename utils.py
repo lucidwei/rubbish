@@ -12,6 +12,7 @@ from sklearn.pipeline import Pipeline
 from tpot import TPOTRegressor
 from joblib import Memory
 import pipe_preproc
+from pipe_models import *
 
 
 # 针对wind excel数据复用
@@ -137,12 +138,12 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
         # 缓存数据
         with open('debug/prepipe_data', 'wb') as f:
             pickle.dump((X, y), f)
-        print('pickle saved')
+        print('data pickle saved')
     else:
         # 读取缓存数据
         with open('debug/prepipe_data', 'rb') as f:
             (X, y) = pickle.load(f)
-        print('pickle loaded')
+        print('data pickle loaded')
 
     return X, y
 
@@ -151,19 +152,18 @@ def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir,
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         train_size=0.8, test_size=0.2,
                                                         shuffle=False)
-    memory = Memory(location=cachedir, verbose=1)
+    memory = Memory(location=cachedir, verbose=0)
     cv = TimeSeriesSplit()
     pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=cv,
-                                       # TODO: 这里都有什么方法，可以挑选一下
-                                       template='SelectFromModel-Transformer-Regressor',
+                                       template='Selector-Transformer-Regressor',
                                        scoring='r2',
                                        early_stop=4,
                                        config_dict=tpot_config,
                                        max_time_mins=max_time_mins,
                                        memory=memory,
                                        warm_start=True,
-                                       # periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
-                                       # log_file=abspath('../../Documents/tpot_log/log'+str(pipe_num)),
+                                       periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
+                                       log_file=abspath('../../Documents/tpot_log/log'+str(pipe_num)),
                                        random_state=1996, verbosity=3)
     pipeline_optimizer.fit(X_train, y_train)
     print('A pipe finised, score(X_test, y_test):', pipeline_optimizer.score(X_test, y_test))
@@ -177,29 +177,24 @@ def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir,
 
 tpot_config = {
     'sklearn.feature_selection.SelectFromModel': {
-        'threshold': np.arange(0.05, 0.70, 0.05),
+        # 'threshold': [0.001, 0.003, 0.005, 0.008],
         'estimator': {
             'sklearn.ensemble.ExtraTreesRegressor': {
                 'n_estimators': [100],
-                'max_features': np.arange(0.05, 1.01, 0.05)
+                'max_features': np.arange(0.05, 0.5, 0.05)
             }
-        }
+        },
+        'max_features': [100, 200, 300]
     },
 
     'sklearn.feature_selection.SelectPercentile': {
-        'percentile': range(5, 30),
+        'percentile': range(1, 5),
         'score_func': {
-            'sklearn.feature_selection.mutual_info_regression': {
-                'n_neighbors': [3, 5, 7, 10],
-
-            }
+            'sklearn.feature_selection.mutual_info_regression': None,
+            'sklearn.feature_selection.f_regression': None
         }
     },
     # Preprocessors
-    'sklearn.preprocessing.Binarizer': {
-        'threshold': np.arange(0.01, 1.01, 0.05)
-    },
-
     'sklearn.decomposition.FastICA': {
         'tol': np.arange(0.01, 1.01, 0.05)
     },
@@ -207,12 +202,6 @@ tpot_config = {
     'sklearn.cluster.FeatureAgglomeration': {
         'linkage': ['ward', 'complete', 'average'],
         'affinity': ['euclidean', 'l1', 'l2', 'manhattan', 'cosine']
-    },
-
-    'sklearn.preprocessing.MaxAbsScaler': {
-    },
-
-    'sklearn.preprocessing.MinMaxScaler': {
     },
 
     'sklearn.preprocessing.Normalizer': {
@@ -328,3 +317,33 @@ tpot_config = {
         'power_t': [0.5, 0.0, 1.0, 0.1, 100.0, 10.0, 50.0]
     }
 }
+
+def get_models_dump(X_train, y_train):
+    models_num = 1
+    def dumps_exist():
+        for i in range(0, models_num):
+            if not os.path.exists(r'models_dump/model%d_dump' %i):
+                return False
+        else:
+            return True
+
+    def get_trained_dump():
+        models = []
+        for i in range(0, models_num):
+            if not os.path.exists(r'models_dump/model%d_dump' % i):
+                eval('exported_pipeline%d'%i).fit(X_train, y_train.iloc[:,i])
+                with open('models_dump/model%d_dump'%i, 'wb') as f:
+                    pickle.dump(eval('exported_pipeline%d'%i), f)
+                print('model%d pickle saved' %i)
+            models.append(eval('exported_pipeline%d'%i))
+        return models
+
+    if dumps_exist():
+        models = []
+        for i in range(0, models_num):
+            with open('models_dump/model%d_dump'%i, 'rb') as f:
+                models.append(pickle.load(f))
+        print('models pickle loaded')
+    else:
+        models = get_trained_dump()
+    return models

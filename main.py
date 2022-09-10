@@ -19,29 +19,25 @@ from tpot.builtins import StackingEstimator
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 ## 原始数据文件是否已经更新
 if_update = False
-## 是否使用缓存的数据
+## 预处理逻辑(参数)变更/缓存的pickle需要更新时，设为False
 use_cache = False
+## 预处理参数
 align_to = 'month'
-begT = '2005-01'
+use_lag_x = 15
+begT = '2004-01'
 endT = datetime.date.today()
 
+X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, use_lag_x, begT, endT)
 
-X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, begT, endT)
-
-X_train, X_test, y_train, y_test = train_test_split(X, y.iloc[:, 0],
+X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     train_size=0.75, test_size=0.25,
                                                     shuffle=False)
 
-pipeline_optimizer = TPOTRegressor(generations=100, population_size=100, cv=5,
-                                    random_state=1996, verbosity=2)
+models = utils.get_models_dump(X_train, y_train)
+evluator = Evaluator(models, X_test, y_test)
 
-# pipeline_optimizer = make_pipeline(
-#     SelectFromModel(estimator=ExtraTreesRegressor(max_features=0.8500000000000001, n_estimators=100), threshold=0.45),
-#     StackingEstimator(estimator=GradientBoostingRegressor(alpha=0.8, learning_rate=0.01, loss="quantile", max_depth=4,
-#                                                           max_features=0.1, min_samples_leaf=14, min_samples_split=18,
-#                                                           n_estimators=100, subsample=0.15000000000000002)),
-#     LassoLarsCV(normalize=False)
-# )
+evaluator.plot_port_return()
+evaluator.plot_excess_return()
 
 pipeline_optimizer.fit(X_train, y_train)
 print(pipeline_optimizer.score(X_test, y_test))
