@@ -4,6 +4,7 @@
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import pickle, datetime
 
+import eda
 import utils
 import pandas as pd
 from sklearn.pipeline import Pipeline, make_pipeline
@@ -20,7 +21,7 @@ PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 ## 原始数据文件是否已经更新
 if_update = False
 ## 预处理逻辑(参数)变更/缓存的pickle需要更新时，设为False
-use_cache = False
+use_cache = True
 ## 预处理参数
 align_to = 'month'
 use_lag_x = 15
@@ -34,13 +35,11 @@ X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     shuffle=False)
 
 models = utils.get_models_dump(X_train, y_train)
-evluator = Evaluator(models, X_test, y_test)
+evaluator = utils.Evaluator(models, X_test, y_test)
 
-evaluator.plot_port_return()
-evaluator.plot_excess_return()
+port_return = evaluator.get_port_ret()
+bench0_return = evaluator.get_bench0_ret()
+bench1_return = evaluator.get_bench1_ret()
+excess_return = port_return - bench0_return
 
-pipeline_optimizer.fit(X_train, y_train)
-print(pipeline_optimizer.score(X_test, y_test))
-pred = pipeline_optimizer.predict(X_test)
-# print(pred)
-pipeline_optimizer.export('./tpot_gen/trial_pipeline1.py')
+eda.plot_multi_arrays()

@@ -83,3 +83,6 @@ def iter_compare_graphs(x_df, x_df_new, info, col_num: int):
                   '\n单位:' + str(info.loc[col, '单位']))
         plt.show()
         plt.clf()
+
+def plot_multi_arrays():
+    pass

@@ -46,26 +46,3 @@ else:
     utils.generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir)
     # rmtree(cachedir)
 
-# tpot-generated models训练
-models = utils.get_models_dumps()
-
-# from sklearn.ensemble import ExtraTreesRegressor
-# from sklearn.feature_selection import SelectPercentile, mutual_info_regression
-# from sklearn.pipeline import make_pipeline
-# from sklearn.preprocessing import PolynomialFeatures
-# from sklearn.model_selection import train_test_split
-#
-# exported_pipeline = make_pipeline(
-#     SelectPercentile(score_func=mutual_info_regression, percentile=2),
-#     PolynomialFeatures(degree=2, include_bias=False, interaction_only=False),
-#     ExtraTreesRegressor(bootstrap=True, max_features=0.05, min_samples_leaf=16, min_samples_split=4, n_estimators=100)
-# )
-#
-# X_train, X_test, y_train, y_test = train_test_split(X, y,
-#                                                     train_size=0.8, test_size=0.2,
-#                                                     shuffle=False)
-# i=0
-# exported_pipeline.fit(X_train, y_train.iloc[:, i])
-# results = exported_pipeline.predict(X_test)
-# print('第%d个资产的Pipe r2 score:' % i, r2_score(y_test.iloc[:, i], results))
-# a=1

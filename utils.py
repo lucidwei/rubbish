@@ -318,32 +318,54 @@ tpot_config = {
     }
 }
 
+
 def get_models_dump(X_train, y_train):
-    models_num = 1
-    def dumps_exist():
-        for i in range(0, models_num):
-            if not os.path.exists(r'models_dump/model%d_dump' %i):
-                return False
+    models_num = 10
+    models = []
+    for i in range(0, models_num):
+        if not os.path.exists(r'models_dump/model%d_dump' % i):
+            eval('exported_pipeline%d'%i).fit(X_train, y_train.iloc[:,i])
+            with open('models_dump/model%d_dump'%i, 'wb') as f:
+                pickle.dump(eval('exported_pipeline%d'%i), f)
+            models.append(eval('exported_pipeline%d' % i))
+            print('model%d pickle saved and appended' % i)
         else:
-            return True
-
-    def get_trained_dump():
-        models = []
-        for i in range(0, models_num):
-            if not os.path.exists(r'models_dump/model%d_dump' % i):
-                eval('exported_pipeline%d'%i).fit(X_train, y_train.iloc[:,i])
-                with open('models_dump/model%d_dump'%i, 'wb') as f:
-                    pickle.dump(eval('exported_pipeline%d'%i), f)
-                print('model%d pickle saved' %i)
-            models.append(eval('exported_pipeline%d'%i))
-        return models
-
-    if dumps_exist():
-        models = []
-        for i in range(0, models_num):
-            with open('models_dump/model%d_dump'%i, 'rb') as f:
+            with open('models_dump/model%d_dump' % i, 'rb') as f:
                 models.append(pickle.load(f))
-        print('models pickle loaded')
-    else:
-        models = get_trained_dump()
+            print('model%d pickle loaded' % i)
+
+    print(models[4].predict(X_train))
     return models
+
+class Evaluator:
+    def __init__(self, models, X_test, y_test):
+        models = models
+        X_test = X_test
+        y_test = y_test
+
+    def get_port_pos(self):
+        pass
+
+    def get_port_ret(self):
+        pass
+
+    # 等权组合
+    def get_bench0_ret(self):
+        pass
+
+    # benchmark models
+    def get_bench1_ret(self):
+        pass
+
+    def get_port_worth(self):
+        pass
+
+    def get_bench0_worth(self):
+        pass
+
+    def get_bench1_worth(self):
+        pass
+
+
+def return_to_worth():
+    pass
