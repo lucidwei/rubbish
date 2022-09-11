@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from statsmodels.tsa.seasonal import STL
 from statsmodels.tsa.stattools import adfuller, kpss
-from eda import get_ori_id
+from utils_eda import get_ori_id
 
 
 class SpecialTreatment(BaseEstimator):

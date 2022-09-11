@@ -3,14 +3,15 @@
 # 2022/8/23   当前系统日期
 # 17:01   当前系统时间
 # PyCharm   创建文件的IDE名称
+import re, copy
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import re
 
 
 def get_info():
     return pd.read_csv(r'.\data\info_table.csv', index_col=0, parse_dates=True)
+
 
 def get_ori_id(id):
     if ')' in id:
@@ -20,6 +21,11 @@ def get_ori_id(id):
     else:
         id_ori = id
     return id_ori
+
+
+def get_ori_name(id, info):
+    return info.loc[id, '指标名称']
+
 
 def plot_id(df: pd.DataFrame, id: str, info):
     sr = df[id].copy()
@@ -50,8 +56,8 @@ def plot_id(df: pd.DataFrame, id: str, info):
 
 # Notebook用，需传入x数据和包含指标信息的info
 def iter_graphs(x_df: pd.DataFrame, info, col_num: int, n=30):
-    print('画从第%d到第%d列的图' %(col_num,col_num+n))
-    for col in x_df.columns[col_num:col_num+n]:
+    print('画从第%d到第%d列的图' % (col_num, col_num + n))
+    for col in x_df.columns[col_num:col_num + n]:
         plot_id(x_df, col, info)
 
 
@@ -84,5 +90,9 @@ def iter_compare_graphs(x_df, x_df_new, info, col_num: int):
         plt.show()
         plt.clf()
 
-def plot_multi_arrays():
-    pass
+
+def trans_columns_name(df):
+    info = get_info()
+    transformed = copy.deepcopy(df)
+    transformed.columns = df.columns.to_series().apply(get_ori_id).apply(lambda x: get_ori_name(x, info)).values
+    return transformed

@@ -136,12 +136,12 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
         print('...Pre-processing finished\n')
 
         # 缓存数据
-        with open('debug/prepipe_data', 'wb') as f:
+        with open('data_dump/prepipe_data', 'wb') as f:
             pickle.dump((X, y), f)
         print('data pickle saved')
     else:
         # 读取缓存数据
-        with open('debug/prepipe_data', 'rb') as f:
+        with open('data_dump/prepipe_data', 'rb') as f:
             (X, y) = pickle.load(f)
         print('data pickle loaded')
 
@@ -163,7 +163,7 @@ def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir,
                                        memory=memory,
                                        warm_start=True,
                                        periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
-                                       log_file=abspath('../../Documents/tpot_log/log'+str(pipe_num)),
+                                       log_file=abspath('../../Documents/tpot_log/log' + str(pipe_num)),
                                        random_state=1996, verbosity=3)
     pipeline_optimizer.fit(X_train, y_train)
     print('A pipe finised, score(X_test, y_test):', pipeline_optimizer.score(X_test, y_test))
@@ -324,9 +324,9 @@ def get_models_dump(X_train, y_train):
     models = []
     for i in range(0, models_num):
         if not os.path.exists(r'models_dump/model%d_dump' % i):
-            eval('exported_pipeline%d'%i).fit(X_train, y_train.iloc[:,i])
-            with open('models_dump/model%d_dump'%i, 'wb') as f:
-                pickle.dump(eval('exported_pipeline%d'%i), f)
+            eval('exported_pipeline%d' % i).fit(X_train, y_train.iloc[:, i])
+            with open('models_dump/model%d_dump' % i, 'wb') as f:
+                pickle.dump(eval('exported_pipeline%d' % i), f)
             models.append(eval('exported_pipeline%d' % i))
             print('model%d pickle saved and appended' % i)
         else:
@@ -334,38 +334,79 @@ def get_models_dump(X_train, y_train):
                 models.append(pickle.load(f))
             print('model%d pickle loaded' % i)
 
-    print(models[4].predict(X_train))
     return models
 
-class Evaluator:
-    def __init__(self, models, X_test, y_test):
-        models = models
-        X_test = X_test
-        y_test = y_test
 
+class Evaluator:
+    def __init__(self, models, X_test, y_test, X_train, y_train):
+        self.models = models
+        self.X_test = X_test
+        self.y_test = y_test
+        # 训练集净值、position需要train data
+        self.X_train = X_train
+        self.y_train = y_train
+        self.port_pos = self.get_port_pos()
+        self.port_ret = self.get_port_ret()
+        self.bench0_ret = self.get_bench0_ret()
+
+    # 除了z-score还可以用percentile计算仓位
     def get_port_pos(self):
-        pass
+        # 对y_train求z-score时得到均值标准差，再针对pred和y_test normalize
+        pos_info = pd.DataFrame(columns=['avg', 'std'], index=self.y_train.columns)
+        for col_ind, col in self.y_train.iteritems():
+            pos_info.loc[col_ind, 'avg'] = np.average(col)
+            pos_info.loc[col_ind, 'std'] = np.std(col)
+        # 将预测收益率转化为z-score
+        pos_z = pd.DataFrame(index=self.y_test.index, columns=self.y_test.columns)
+        i = 0
+        for col_ind in self.y_test.columns:
+            pred = self.models[i].predict(self.X_test)
+            pos_z.iloc[:, i] = (pred - pos_info.loc[col_ind, 'avg']) / pos_info.loc[col_ind, 'std']
+            i += 1
+        # z-score转化为position
+        pos = pd.DataFrame(index=pos_z.index, columns=pos_z.columns)
+        for row_ind, row in pos_z.iterrows():
+            row[row < 0] = 0  # 不进行做空
+            pos.loc[row_ind, :] = row / sum(row)
+
+        return pos
 
     def get_port_ret(self):
-        pass
+        ret_df = pd.DataFrame(index=self.y_test.index, columns=['return'])
+        for i in self.y_test.index:
+            ret_df.loc[i, 'return'] = np.average(self.y_test.loc[i, :], weights=self.port_pos.loc[i, :])
+        return ret_df
 
     # 等权组合
     def get_bench0_ret(self):
-        pass
+        weights = [1 / len(self.y_test.columns) for _ in self.y_test.columns]
+        # TODO: 利率债的return应该取相反数，简单起见忽略票息
+        ret_df = pd.DataFrame(index=self.y_test.index, columns=['return'])
+        for i in self.y_test.index:
+            ret_df.loc[i, 'return'] = np.average(self.y_test.loc[i, :], weights=weights)
+        # TODO: 检查这个和实际是否一致，怎么感觉数太小了
+        return ret_df
 
     # benchmark models
     def get_bench1_ret(self):
         pass
 
     def get_port_worth(self):
-        pass
+        return return_to_worth(self.port_ret)
 
     def get_bench0_worth(self):
-        pass
+        return return_to_worth(self.bench0_ret)
 
     def get_bench1_worth(self):
         pass
 
 
-def return_to_worth():
-    pass
+# 月末净值
+def return_to_worth(ret_df):
+    worth_df = pd.DataFrame(index=ret_df.index, columns=['worth'])
+    for i in range(len(worth_df.index)):
+        if i == 0:
+            worth_df.iloc[i, 0] = 1 + ret_df.iloc[i, 0]
+        else:
+            worth_df.iloc[i, 0] = (1 + ret_df.iloc[i, 0]) * worth_df.iloc[i - 1, 0]
+    return worth_df
