@@ -3,14 +3,18 @@
 # 2022/8/23   当前系统日期
 # 17:01   当前系统时间
 # PyCharm   创建文件的IDE名称
-import re, copy
+import re, copy, platform
+from os.path import abspath
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+system = platform.system().lower()
 def get_info():
-    return pd.read_csv(r'.\data\info_table.csv', index_col=0, parse_dates=True)
+    if system == 'windows':
+        return pd.read_csv(r'.\data\info_table.csv', index_col=0, parse_dates=True)
+    else:
+        return abspath('data/info_table.csv')
 
 
 def get_ori_id(id):
