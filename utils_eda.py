@@ -14,7 +14,7 @@ def get_info():
     if system == 'windows':
         return pd.read_csv(r'.\data\info_table.csv', index_col=0, parse_dates=True)
     else:
-        return abspath('data/info_table.csv')
+        return pd.read_csv(abspath('data/info_table.csv'), index_col=0, parse_dates=True)
 
 
 def get_ori_id(id):

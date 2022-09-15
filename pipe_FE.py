@@ -3,12 +3,19 @@ import copy
 
 import numpy as np
 import pandas as pd
+import talib
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline, FeatureUnion
 # from tsfresh.transformers import RelevantFeatureAugmenter
 from sklearn.base import BaseEstimator, TransformerMixin
-import pickle, talib
-import utils_eda
+from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
+import utils_eda, pipe_preproc
+
 
 
 # TODO　流程：get_stationary，transformcolumn(get_tsfresh, get_talib), (以上两个是并行的featureunion)
@@ -97,28 +104,15 @@ def get_ori_columns(X):
     return [utils_eda.is_ori_id(id) for id in X.columns]
 
 
-##################################开发调试阶段代码
-with open('data_dump/prepipe_data', 'rb') as f:
-    (X, y) = pickle.load(f)
-print('data pickle loaded')
-use_lag_x = 10
-
 # ct = ColumnTransformer([
 #     ('macroFE', MacroFE(), ~get_asset_columns()),
 #     ('assetFE', AssetFE(), get_asset_columns()),
 # ])
 
 
-from sklearn.decomposition import PCA, TruncatedSVD
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
-from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
-from sklearn.metrics import r2_score
-import utils, pipe_preproc
 
-# 自定义一下把列名放回去
+
+# 自定义一下把列名放回去，不过没有用，原生框架还是会丢
 class CustomPCA(PCA):
     def fit_transform(self, X, y=None):
         U = super().fit_transform(X)
@@ -182,25 +176,13 @@ union = FeatureUnion([("PCA", pipe1),
                       ('talibFE', talibFE),
                       ])
 
-ppl = Pipeline([
-    ('features', union),
-    ('fillna', SimpleImputer(strategy='mean')),
-    ('scaler1', StandardScaler()),
-    ('selector1', select_40n),
-    # 这步之前列名没了，不是df不能操作
-    ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
-    # ('selector2', select_20n),
-])
+# ppl = Pipeline([
+#     ('features', union),
+#     ('fillna', SimpleImputer(strategy='mean')),
+#     ('scaler1', StandardScaler()),
+#     ('selector1', select_40n),
+#     # 这步之前列名没了，不是df不能操作
+#     ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
+#     # ('selector2', select_20n),
+# ])
 
-
-i = 0  # 可作为循环训练起点
-for yi_ind, yi in y.iloc[:, i:].iteritems():
-    # X, yi = ppl.fit_transform(X, yi)
-    X_supervised, yi = ppl.fit_transform(X, yi)
-    X = select_20n.fit_transform(X_supervised, yi)
-    pipe, X_test, y_test = utils.generate_1_pipe_light(X, yi, generations=50, population_size=50, max_time_mins=100,
-                                                       pipe_num=i)
-    preds = pipe.predict(X_test)
-    print('第%d个资产的Pipe r2 score:' % i, r2_score(y_test, preds))
-    i += 1
-##################################
