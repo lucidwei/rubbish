@@ -180,9 +180,9 @@ class GetStationary(BaseEstimator, TransformerMixin):
             if record[col_ind] != 'stationary' and self.info.loc[ori_id, '单位'] != '%':
                 stl = STL(col.dropna(), period=12, robust=True)
                 decomposed = stl.fit()
-                df.insert(df.columns.get_loc(col_ind)+1, column=col_ind + '_trend', value=decomposed.trend)
+                df.insert(df.columns.get_loc(col_ind) + 1, column=col_ind + '_trend', value=decomposed.trend)
                 # TODO: 低优先级 可能需要处理个别数据的outliers
-                df.insert(df.columns.get_loc(col_ind)+2, column=col_ind + '_resid', value=decomposed.resid)
+                df.insert(df.columns.get_loc(col_ind) + 2, column=col_ind + '_resid', value=decomposed.resid)
                 df = df.copy()
                 # 按理说应该drop，但万一原始数据也有用呢
                 # df.drop(col_ind, inplace=True, axis=1)
@@ -255,16 +255,17 @@ class SeriesToSupervised(BaseEstimator):
         # 如果需要增加时移feature可调大n_in，同理n_out。
         dfs, col_names = list(), list()
         # input sequence (t-n, ... t-1)
-        x_df = X.copy()
+        # TODO:这里打个补丁，但是列名还是丢失了
+        x_df = pd.DataFrame(X).copy(deep=True)
         for i in range(self.n_in, 0, -1):
             dfs.append(x_df.shift(i))
-            col_names += [('var%d(t-%d)' % (j + 1, i) + x_df.columns.values[j]) for j in range(x_df.shape[1])]
+            col_names += [('var%d(t-%d)' % (j + 1, i) + str(x_df.columns.values[j])) for j in range(x_df.shape[1])]
         X = pd.concat(dfs, axis=1)
         X.columns = col_names
 
         # forecast sequence (t, t+1, ... t+n)
         dfs, col_names = list(), list()
-        y_df = y.copy()
+        y_df = pd.DataFrame(y).copy(deep=True)
         for i in range(0, self.n_out):
             dfs.append(y_df.shift(-i))
             if i == 0:
@@ -273,15 +274,23 @@ class SeriesToSupervised(BaseEstimator):
                 col_names += [('var%d(t+%d)' % (j + 1, i) + y_df.columns.values[j]) for j in range(y_df.shape[1])]
         y = pd.concat(dfs, axis=1)
         y.columns = col_names
+        # 补丁
+        y.index = X.index
 
         if self.dropnan:
+            # X y合并再拆开
+            combined = pd.concat([X, y], join="inner", axis=1)
             # drop rows with NaN values
-            X.dropna(inplace=True)
-            y.dropna(inplace=True)
-            # 只保留x y共有的日期
-            common_ind = X.index.intersection(y.index)
-            X = X.loc[common_ind]
-            y = y.loc[common_ind]
+            combined.dropna(inplace=True)
+            X = combined.iloc[:, :-y_df.shape[1]]
+            y = combined.iloc[:, -y_df.shape[1]:]
+            # # drop rows with NaN values
+            # X.dropna(inplace=True)
+            # y.dropna(inplace=True)
+            # # 只保留x y共有的日期
+            # common_ind = X.index.intersection(y.index)
+            # X = X.loc[common_ind]
+            # y = y.loc[common_ind]
 
         return X, y
 

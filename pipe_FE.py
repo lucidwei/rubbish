@@ -110,17 +110,13 @@ use_lag_x = 10
 
 
 from sklearn.decomposition import PCA, TruncatedSVD
-import pipe_preproc
-from math import log, sqrt
-
-
-# def add_col_name(func, col_list):
-#     '''Decorator that returns DF with column names.'''
-#     def wrap(*args, **kwargs):
-#         result = func(*args, **kwargs)
-#         df = pd.DataFrame(result, index=X.index, columns=col_list)
-#         return df
-#     return wrap
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
+from sklearn.metrics import r2_score
+import utils, pipe_preproc
 
 # 自定义一下把列名放回去
 class CustomPCA(PCA):
@@ -137,6 +133,35 @@ class CustomTruncatedSVD(TruncatedSVD):
         return df
 
 
+class CustomLinearRegression(LinearRegression):
+    def fit(self, X, y, sample_weight=None):
+        if isinstance(X, tuple):
+            X, y = X
+        return super().fit(X, y)
+
+
+num_select = 40
+select_40n = FeatureUnion([
+    ('lr', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_select)),
+    ('ridge', SelectFromModel(estimator=RidgeCV(), max_features=num_select)),
+    ('sgd', SelectFromModel(estimator=SGDRegressor(), max_features=num_select)),
+    ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select)),
+    ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_select)),
+    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
+    ('mi', SelectKBest(score_func=mutual_info_regression, k=num_select))
+])
+
+num_20 = 20
+select_20n = FeatureUnion([
+    ('lr', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_20)),
+    ('ridge', SelectFromModel(estimator=RidgeCV(), max_features=num_20)),
+    ('sgd', SelectFromModel(estimator=SGDRegressor(), max_features=num_20)),
+    ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_20)),
+    ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_20)),
+    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
+    ('mi', SelectKBest(score_func=mutual_info_regression, k=num_20))
+])
+
 union1 = FeatureUnion([
     ("pca", CustomPCA(n_components=2)),
     ("svd", CustomTruncatedSVD(n_components=2)),
@@ -151,66 +176,30 @@ talibFE = ColumnTransformer([
     ('talibFE', MacroFE(), get_ori_columns),
 ])
 
+# TODO: feature union自动丢失列名
 union = FeatureUnion([("PCA", pipe1),
-                      #TODO: 记得解除注释
-                      # ('origin_station', pipe_preproc.GetStationary()),
+                      ('origin_station', pipe_preproc.GetStationary()),
                       ('talibFE', talibFE),
                       ])
-
-from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
-from sklearn.metrics import r2_score
-import utils
-
-num_select = 40
-select_40n = FeatureUnion([
-    ('lr', SelectFromModel(estimator=LinearRegression(), max_features=num_select)),
-    ('ridge', SelectFromModel(estimator=RidgeCV(), max_features=num_select)),
-    ('sgd', SelectFromModel(estimator=SGDRegressor(), max_features=num_select)),
-    ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select)),
-    ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_select)),
-    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
-    ('mi', SelectKBest(score_func=mutual_info_regression, k=num_select))
-])
-
-num_select = 20
-select_20n = FeatureUnion([
-    ('lr', SelectFromModel(estimator=LinearRegression(), max_features=num_select)),
-    ('ridge', SelectFromModel(estimator=RidgeCV(), max_features=num_select)),
-    ('sgd', SelectFromModel(estimator=SGDRegressor(), max_features=num_select)),
-    ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select)),
-    ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_select)),
-    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
-    ('mi', SelectKBest(score_func=mutual_info_regression, k=num_select))
-])
-
-# select_40n = FeatureUnion([
-#     ('lr', SelectFromModel(estimator=LinearRegression())),
-#     ('ridge', SelectFromModel(estimator=RidgeCV())),
-#     ('sgd', SelectFromModel(estimator=SGDRegressor())),
-#     ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996))),
-#     ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996))),
-#     # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
-#     ('mi', SelectKBest(score_func=mutual_info_regression, k=num_select))
-# ])
-# select_40n.set_params(max_features=40)
 
 ppl = Pipeline([
     ('features', union),
     ('fillna', SimpleImputer(strategy='mean')),
+    ('scaler1', StandardScaler()),
     ('selector1', select_40n),
+    # 这步之前列名没了，不是df不能操作
     ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
+    # ('selector2', select_20n),
 ])
 
 
 i = 0  # 可作为循环训练起点
 for yi_ind, yi in y.iloc[:, i:].iteritems():
-    X_supervised = ppl.fit_transform(X, yi)
-    X_selected = select_20n.fit_transform(X_supervised, yi)
-    pipe, X_test, y_test = utils.generate_1_pipe_light(X, yi, generations, population_size, max_time_mins, cachedir,
-                                                       pipe_num=i, tpot_config=utils.tpot_config)
+    # X, yi = ppl.fit_transform(X, yi)
+    X_supervised, yi = ppl.fit_transform(X, yi)
+    X = select_20n.fit_transform(X_supervised, yi)
+    pipe, X_test, y_test = utils.generate_1_pipe_light(X, yi, generations=50, population_size=50, max_time_mins=100,
+                                                       pipe_num=i)
     preds = pipe.predict(X_test)
     print('第%d个资产的Pipe r2 score:' % i, r2_score(y_test, preds))
     i += 1
