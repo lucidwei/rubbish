@@ -23,6 +23,12 @@ def get_ori_id(id):
     return id_ori
 
 
+def is_ori_id(id):
+    if '_' in id:
+        return False
+    else:
+        return True
+
 def get_ori_name(id, info):
     return info.loc[id, 'Ö¸±êÃû³Æ']
 
@@ -94,5 +100,19 @@ def iter_compare_graphs(x_df, x_df_new, info, col_num: int):
 def trans_columns_name(df):
     info = get_info()
     transformed = copy.deepcopy(df)
-    transformed.columns = df.columns.to_series().apply(get_ori_id).apply(lambda x: get_ori_name(x, info)).values
+    transformed.columns = df.columns.to_series().apply(get_ori_id).apply(lambda x: get_ori_name(x, info))
     return transformed
+
+
+def trans_series_name(sr):
+    info = get_info()
+    transformed = copy.deepcopy(sr)
+    return pd.Series(transformed).apply(get_ori_id).apply(lambda x: get_ori_name(x, info))
+
+
+def trans_series_id(sr):
+    transformed = copy.deepcopy(sr)
+    return pd.Series(transformed).apply(get_ori_id)
+
+
+

@@ -11,6 +11,8 @@ import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from statsmodels.tsa.seasonal import STL
 from statsmodels.tsa.stattools import adfuller, kpss
+
+import utils_eda
 from utils_eda import get_ori_id
 
 
@@ -155,11 +157,11 @@ def fill_x_na(df, info_df):
 
 
 class GetStationary(BaseEstimator, TransformerMixin):
-    def __init__(self, info_df):
-        self.info = info_df
+    def __init__(self):
+        self.info = utils_eda.get_info()
         print('...initializing GetStationary\n')
 
-    def fit(self, X, y):
+    def fit(self, X, y=None):
         return self
 
     def transform(self, X, y=None):
@@ -185,8 +187,8 @@ class GetStationary(BaseEstimator, TransformerMixin):
                 # 按理说应该drop，但万一原始数据也有用呢
                 # df.drop(col_ind, inplace=True, axis=1)
         df.fillna(method='bfill', inplace=True)
-        y.fillna(method='bfill', inplace=True)
-        return df, y
+        # y.fillna(method='bfill', inplace=True)
+        return df
 
 
 def station_test(ts):

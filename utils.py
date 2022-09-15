@@ -12,6 +12,7 @@ from sklearn.pipeline import Pipeline
 from tpot import TPOTRegressor
 from joblib import Memory
 import pipe_preproc
+import utils_eda
 from pipe_models import *
 
 
@@ -128,11 +129,13 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
         pipe_preprocess = Pipeline(steps=[
             ('special_treatment', pipe_preproc.SpecialTreatment(info)),
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
-            ('get_stationary', pipe_preproc.GetStationary(info)),
-            ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1))
+            # ('get_stationary', pipe_preproc.GetStationary(info)),
+            # 放到特征工程最后
+            #('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1))
         ])
 
         X, y = pipe_preprocess.fit_transform(raw_x, raw_y)
+
         print('...Pre-processing finished\n')
 
         # 缓存数据
@@ -410,3 +413,56 @@ def return_to_worth(ret_df):
         else:
             worth_df.iloc[i, 0] = (1 + ret_df.iloc[i, 0]) * worth_df.iloc[i - 1, 0]
     return worth_df
+
+
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
+
+
+# 想要得到某个资产选择出的features原始id，每个原始id在10个资产中被选出来的次数
+# 针对预处理生成的X进行筛选
+# 返回多个特征筛选方法选择出来的原始数据ID的并集
+def single_y_selector(X, yi, i):
+    num_select = 50
+    lr = SelectFromModel(estimator=LinearRegression(), max_features=num_select).fit(X, yi)
+    ridge = SelectFromModel(estimator=RidgeCV(), max_features=num_select).fit(X, yi)
+    sgd = SelectFromModel(estimator=SGDRegressor(), max_features=num_select).fit(X, yi)
+    rf = SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select).fit(X, yi)
+    gbr = SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_select).fit(X, yi)
+    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
+    mi = SelectKBest(score_func=mutual_info_regression, k=num_select).fit(X, yi)
+    common_support = lr.get_support() | ridge.get_support() | sgd.get_support() | rf.get_support() | \
+                     gbr.get_support() | mi.get_support()
+    print('%d features selected for asset %d' % (sum(common_support), i))
+    selected = X.columns[common_support]
+    selected_ori = np.unique(utils_eda.trans_series_id(selected))
+    print('%d original features selected for asset %d' % (len(selected_ori), i))
+    return selected_ori
+
+
+# 多个资产筛选出来的原始ID取并集
+def manual_features_selector(X, y):
+    final = pd.Series()
+    l = len(y.columns)
+    for i in range(l):
+        final = np.union1d(final, single_y_selector(X, y.iloc[:, i], i))
+    print('%d original features selected for all assets' % (len(final)))
+    return final
+
+
+def get_garbage_features(selected_id):
+    info = utils_eda.get_info()
+    # info-selected取差集
+    garbage = list(set(info.index).difference(set(selected_id)))
+    names = pd.Series(garbage).apply(lambda x: utils_eda.get_ori_name(x, info))
+    # id和名称保存到data_dump
+    garbage_info = pd.DataFrame({'ID': garbage, '名称': names})
+    garbage_info.to_csv(r'.\data\garbage.csv')
+    return garbage
+
+
+# TODO: 中优先级 帮助好像不大，放到preproc里
+def remove_garbage_data(X, selected_id):
+
+    pass

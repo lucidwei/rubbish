@@ -12,10 +12,10 @@ PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 ## 原始数据文件是否已经更新
 if_update = False
 ## 预处理逻辑(参数)变更/缓存的pickle需要更新时，设为False
-use_cache = True
+use_cache = False
 ## 预处理参数
 align_to = 'month'
-use_lag_x = 15
+use_lag_x = 10
 begT = '2004-01'
 endT = datetime.date.today()
 
