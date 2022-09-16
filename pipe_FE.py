@@ -136,24 +136,23 @@ class CustomLinearRegression(LinearRegression):
 
 num_select = 40
 select_40n = FeatureUnion([
-    ('lr', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_select)),
-    ('ridge', SelectFromModel(estimator=RidgeCV(), max_features=num_select)),
-    ('sgd', SelectFromModel(estimator=SGDRegressor(), max_features=num_select)),
-    ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select)),
-    ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_select)),
+    ('lr0', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_select)),
+    ('ridge0', SelectFromModel(estimator=RidgeCV(), max_features=num_select)),
+    ('sgd0', SelectFromModel(estimator=SGDRegressor(), max_features=num_select)),
+    ('rf0', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select)),
+    ('gbr0', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_select)),
     # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
-    ('mi', SelectKBest(score_func=mutual_info_regression, k=num_select))
+    ('mi0', SelectKBest(score_func=mutual_info_regression, k=num_select))
 ])
 
 num_20 = 20
 select_20n = FeatureUnion([
-    ('lr', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_20)),
-    ('ridge', SelectFromModel(estimator=RidgeCV(), max_features=num_20)),
-    ('sgd', SelectFromModel(estimator=SGDRegressor(), max_features=num_20)),
-    ('rf', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_20)),
-    ('gbr', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_20)),
-    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
-    ('mi', SelectKBest(score_func=mutual_info_regression, k=num_20))
+    ('lr1', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_20)),
+    ('ridge1', SelectFromModel(estimator=RidgeCV(), max_features=num_20)),
+    ('sgd1', SelectFromModel(estimator=SGDRegressor(), max_features=num_20)),
+    ('rf1', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_20)),
+    ('gbr1', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_20)),
+    ('mi1', SelectKBest(score_func=mutual_info_regression, k=num_20))
 ])
 
 union1 = FeatureUnion([
@@ -173,16 +172,7 @@ talibFE = ColumnTransformer([
 # TODO: feature union自动丢失列名
 union = FeatureUnion([("PCA", pipe1),
                       ('origin_station', pipe_preproc.GetStationary()),
-                      ('talibFE', talibFE),
+                      ('talibFE', MacroFE()),
                       ])
 
-# ppl = Pipeline([
-#     ('features', union),
-#     ('fillna', SimpleImputer(strategy='mean')),
-#     ('scaler1', StandardScaler()),
-#     ('selector1', select_40n),
-#     # 这步之前列名没了，不是df不能操作
-#     ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
-#     # ('selector2', select_20n),
-# ])
 

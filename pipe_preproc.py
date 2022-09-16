@@ -165,13 +165,11 @@ class GetStationary(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y=None):
-        if isinstance(X, tuple):
-            X, y = X
         print('...transforming GetStationary \n')
         # TODO: 低优先级 有些规律性空值的或许有计算差错（未验证猜想）
-        df = X.fillna(method='ffill')
+        df = deepcopy(X).fillna(method='ffill')
         record = {col_ind: station_test(col) for col_ind, col in df.iteritems()}
-        count = pd.value_counts(list(record.values()))
+        # count = pd.value_counts(list(record.values()))
         # print('There are %d not stationary variables' % (len(record) - count['stationary']))
         # 不确定trend有没有用，trend和residual都留着吧
         for col_ind, col in df.iteritems():
@@ -185,9 +183,8 @@ class GetStationary(BaseEstimator, TransformerMixin):
                 df.insert(df.columns.get_loc(col_ind) + 2, column=col_ind + '_resid', value=decomposed.resid)
                 df = df.copy()
                 # 按理说应该drop，但万一原始数据也有用呢
-                # df.drop(col_ind, inplace=True, axis=1)
+                # station_only = df.drop(col_ind, axis=1)
         df.fillna(method='bfill', inplace=True)
-        # y.fillna(method='bfill', inplace=True)
         return df
 
 

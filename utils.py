@@ -151,15 +151,20 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, b
     return X, y
 
 
-def generate_1_pipe_light(X, y, generations, population_size, max_time_mins, pipe_num=None):
+def generate_1_pipe_auto(X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         train_size=0.8, test_size=0.2,
                                                         shuffle=False)
+    memory = Memory(location=cachedir, verbose=0)
     cv = TimeSeriesSplit()
     pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=cv,
                                        scoring='r2',
+                                       early_stop=20,
                                        max_time_mins=max_time_mins,
+                                       memory=memory,
                                        warm_start=True,
+                                       periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
+                                       log_file=abspath('../../Documents/tpot_log/log' + str(pipe_num)),
                                        random_state=1996, verbosity=3)
     pipeline_optimizer.fit(X_train, y_train)
     print('A pipe finised, score(X_test, y_test):', pipeline_optimizer.score(X_test, y_test))
