@@ -13,7 +13,7 @@ from tpot import TPOTRegressor
 from joblib import Memory
 import pipe_preproc
 import utils_eda
-from pipe_models import *
+from pipe_models_base import *
 
 
 # 针对wind excel数据复用
