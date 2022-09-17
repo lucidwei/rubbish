@@ -74,13 +74,6 @@ exported_pipeline5 = make_pipeline(
 )
 
 exported_pipeline6 = make_pipeline(
-    make_union(
-        make_union(
-            FunctionTransformer(copy),
-            FunctionTransformer(copy)
-        ),
-        FunctionTransformer(copy)
-    ),
     StackingEstimator(estimator=DecisionTreeRegressor(max_depth=4, min_samples_leaf=18, min_samples_split=12)),
     StackingEstimator(estimator=GradientBoostingRegressor(alpha=0.8, learning_rate=0.1, loss="quantile", max_depth=7, max_features=0.9000000000000001, min_samples_leaf=2, min_samples_split=9, n_estimators=100, subsample=0.45)),
     ExtraTreesRegressor(bootstrap=False, max_features=0.4, min_samples_leaf=4, min_samples_split=8, n_estimators=100)
@@ -88,7 +81,7 @@ exported_pipeline6 = make_pipeline(
 
 exported_pipeline7 = make_pipeline(
     make_union(
-        FunctionTransformer(copy),
+        FunctionTransformer(copy.copy),
         FeatureAgglomeration(affinity="manhattan", linkage="average")
     ),
     SelectPercentile(score_func=f_regression, percentile=47),
