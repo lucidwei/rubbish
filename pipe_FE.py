@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 import talib
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.pipeline import Pipeline, FeatureUnion, make_union
 # from tsfresh.transformers import RelevantFeatureAugmenter
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.impute import SimpleImputer, KNNImputer
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
@@ -61,8 +61,9 @@ class MacroFE(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         print('...transforming MacroFE\n')
-        gen = pd.DataFrame(index=X.index)
-        for col_ind, col in X.iteritems():
+        X_df = pd.DataFrame(X)
+        gen = pd.DataFrame(index=X_df.index)
+        for col_ind, col in X_df.iteritems():
             gen_i = single_generator(col_ind, col, type='macro')
             gen = pd.concat([gen, gen_i], axis=1)
         return gen
@@ -79,6 +80,7 @@ class AssetFE(BaseEstimator, TransformerMixin):
 
 def single_generator(col_ind, feature_ori, type: str):
     generated_df = pd.DataFrame(index=feature_ori.index)
+    col_ind = str(col_ind)
     generated_df[col_ind + '_macd'], generated_df[col_ind + '_macdsignal'], generated_df[
         col_ind + '_macdhist '] = talib.MACD(feature_ori)
     generated_df[col_ind + '_mom10'] = talib.MOM(feature_ori)
@@ -152,36 +154,58 @@ select_20n = FeatureUnion([
     ('mi1', SelectKBest(score_func=mutual_info_regression, k=num_20))
 ])
 
-union1 = FeatureUnion([
-    ("pca", CustomPCA(n_components=2)),
-    ("svd", CustomTruncatedSVD(n_components=2)),
+
+
+###################这是理想的pipeline但是实现起来太麻烦，因为自定义的pipeline不容易放在sklearn里
+# union1 = FeatureUnion([
+#     ("pca", CustomPCA(n_components=2)),
+#     ("svd", CustomTruncatedSVD(n_components=2)),
+# ])
+#
+# pipe1 = Pipeline([
+#     ('get_stationary', pipe_preproc.GetStationary()),
+#     ("union1", union1)
+# ])
+#
+# talibFE = ColumnTransformer([
+#     ('talibFE', MacroFE(), get_ori_columns),
+# ])
+#
+# # TODO: feature union自动丢失列名
+# union = FeatureUnion([("PCA", pipe1),
+#                       ('origin_station', pipe_preproc.GetStationary()),
+#                       ('talibFE', MacroFE()),
+#                       ])
+#
+# from train_FE import use_lag_x
+#
+# FE_ppl = Pipeline([
+#     # TODO: 其他特征是如何处理X的空值的？希望是直接跳过早期缺失数据的空值
+#     ('features', union),
+#     ('fillna', KNNImputer()),
+#     ('scaler1', StandardScaler()),
+#     ('select_40n', select_40n),
+#     # TODO: 这步之前列名没了，列名好像有自己的传递机制。
+#     # 自定义的pipe必须放在sklearn pipe最后，因为sk不支持对y的transform。
+#     # 自定义的方法操作df，但是传入的是没有列名的ndarray，打了补丁
+#     ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
+# ])
+################################################
+
+# 以下是纯sklearn pipeline
+union = FeatureUnion([
+            ('self', FunctionTransformer(copy.deepcopy)),
+            ("pca", PCA(n_components=2)),
+            ("svd", TruncatedSVD(n_components=2)),
+            ('talibFE', MacroFE()),
 ])
-
-pipe1 = Pipeline([
-    ('get_stationary', pipe_preproc.GetStationary()),
-    ("union1", union1)
-])
-
-talibFE = ColumnTransformer([
-    ('talibFE', MacroFE(), get_ori_columns),
-])
-
-# TODO: feature union自动丢失列名
-union = FeatureUnion([("PCA", pipe1),
-                      ('origin_station', pipe_preproc.GetStationary()),
-                      ('talibFE', MacroFE()),
-                      ])
-
-from train_FE import use_lag_x
 
 FE_ppl = Pipeline([
-    # TODO: 其他特征是如何处理X的空值的？希望是直接跳过早期缺失数据的空值
-    ('features', union),
-    ('fillna', KNNImputer()),
-    ('scaler1', StandardScaler()),
+    ('fillna0', KNNImputer()),
+    ('scaler0', StandardScaler()),
     ('select_40n', select_40n),
-    # TODO: 这步之前列名没了，列名好像有自己的传递机制。
-    # 自定义的pipe必须放在sklearn pipe最后，因为sk不支持对y的transform。
-    # 自定义的方法操作df，但是传入的是没有列名的ndarray，打了补丁
-    ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
+    ('feature_gen', union),
+    ('fillna1', KNNImputer()),
+    ('scaler1', StandardScaler()),
+    ('select_20n', select_20n),
 ])

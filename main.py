@@ -19,7 +19,7 @@ use_lag_x = 13
 begT = '2004-01'
 endT = datetime.date.today()
 
-X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, begT, endT)
+X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, use_lag_x, align_to, begT, endT)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     train_size=0.8, test_size=0.2,

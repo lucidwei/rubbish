@@ -8,12 +8,11 @@ from os.path import abspath
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from tpot import TPOTRegressor
 from joblib import Memory
 import pipe_preproc
 import utils_eda
-from pipe_models_base import *
 
 
 # 跨平台文件路径处理
@@ -139,7 +138,7 @@ class GetStructuralData:
         return {'x': sdata_x, 'y': sdata_y}
 
 
-def get_preproc_data(ori_data_path, if_update, use_cache, align_to, begT, endT):
+def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, begT, endT):
     cache_path = get_path('prepipe_data')
     if align_to == 'month':
         info_path = get_path('to_month_table')
@@ -159,6 +158,8 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, begT, endT):
         pipe_preprocess = Pipeline(steps=[
             ('special_treatment', pipe_preproc.SpecialTreatment(info)),
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
+            ('station_origin', pipe_preproc.GetStationary()),
+            ('ts_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_x_lags))
         ])
 
         X, y = pipe_preprocess.fit_transform(raw_x, raw_y)
@@ -379,29 +380,42 @@ tpot_config = {
 def get_models_dump(X_train, y_train, version):
     import pipe_FE
     import copy
-    models_num = 10
+
+    models_num = len(y_train.columns)
     models = []
     for i in range(0, models_num):
         if version == 'benchmark':
+            import pipe_models_base
+            prefix = 'pipe_models_base.'
             file_path = r'models_dump/benchmark/model%d_dump' % i
-            yi = y_train.iloc[:, i]
-            # TODO：deprecated, 数据整个变了
-            X_selected = X_train
         elif version == 'post_FE':
+            import pipe_models_FE
+            prefix = 'pipe_models_FE.'
             file_path = r'models_dump/post_FE/model%d_dump' % i
-            if not os.path.exists(file_path):
-                print('feature engineering before training')
-                X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X_train), y_train.iloc[:, i])
-                X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
-                print('feature engineering finished')
+
+            # if not os.path.exists(file_path):
+                # 这样搞不行，没法得到测试数据。这种数据降维流程上必须训练测试一起transform。
+                # TODO：虽然有未来数据的嫌疑，但这样能节省很多transform的时间。而且目前我还不知如何把y放到ppl里
+                # 正常流程是train训练集，然后测试集按fitted的pipeline直接transform。但是fit怎么写我尚不清楚
+                # 可以这样，get_stationary放回预处理里，to_supervised放到ppl中
+                # print('feature engineering before training')
+                # X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X_train), y_train.iloc[:, i])
+                # X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
+                # print('feature engineering finished')
         else:
             raise Exception('Please specify the right version of models to get')
 
+        yi = y_train.iloc[:, i].copy(deep=True)
+
         if not os.path.exists(file_path):
-            eval('exported_pipeline%d' % i).fit(X_selected, yi)
+            whole_ppl = make_pipeline(
+                pipe_FE.FE_ppl,
+                eval(prefix + 'exported_pipeline%d' % i)
+            )
+            whole_ppl.fit(X_train.copy(deep=True), yi)
             with open(file_path, 'wb') as f:
-                pickle.dump(eval('exported_pipeline%d' % i), f)
-            models.append(eval('exported_pipeline%d' % i))
+                pickle.dump(whole_ppl, f)
+            models.append(whole_ppl)
             print('model %d pickle saved and appended' % i)
         else:
             with open(file_path, 'rb') as f:
@@ -409,6 +423,46 @@ def get_models_dump(X_train, y_train, version):
             print('model %d pickle loaded' % i)
 
     return models
+
+# 这个补丁应该是打不成了，还是正常流程吧
+# def get_models_dump_patch(X_train, y_train, version):
+#     import pipe_FE
+#     import copy
+#     models_num = len(y_train.columns)
+#     models = []
+#     for i in range(0, models_num):
+#         if version == 'benchmark':
+#             file_path = r'models_dump/benchmark/model%d_dump' % i
+#             yi = y_train.iloc[:, i]
+#             # TODO：deprecated, 数据整个变了
+#             X_selected = X_train.copy(deep=True)
+#         elif version == 'post_FE':
+#             file_path = r'models_dump/post_FE/model%d_dump' % i
+#             if not os.path.exists(file_path):
+#                 # TODO：虽然有未来数据的嫌疑，但这样能节省很多transform的时间。而且目前我还不知如何把y放到ppl里
+#                 # 正常流程是train训练集，然后测试集按fitted的pipeline直接transform。但是fit怎么写我尚不清楚
+#                 print('feature engineering before training')
+#                 X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X_train), y_train.iloc[:, i])
+#                 X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
+#                 print('feature engineering finished')
+#         else:
+#             raise Exception('Please specify the right version of models to get')
+#
+#         if not os.path.exists(file_path):
+#             X_train, X_test, y_train, y_test = train_test_split(X_selected, yi,
+#                                                                 train_size=0.8, test_size=0.2,
+#                                                                 shuffle=False)
+#             eval('exported_pipeline%d' % i).fit(X_train, y_train)
+#             with open(file_path, 'wb') as f:
+#                 pickle.dump(eval('exported_pipeline%d' % i), f)
+#             models.append(eval('exported_pipeline%d' % i))
+#             print('model %d pickle saved and appended' % i)
+#         else:
+#             with open(file_path, 'rb') as f:
+#                 models.append(pickle.load(f))
+#             print('model %d pickle loaded' % i)
+#
+#     return models, X_test, y_test, X_train, y_train # 这个也不行啊，返回的是单个模型的数据
 
 
 # 该类中bench指等权组合，其他benchmark model需要将model list作为变量传入

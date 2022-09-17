@@ -34,7 +34,7 @@ if __name__ == "__main__":
     X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, begT, endT)
 
     i = 2  # 可作为循环训练起点
-    for yi_ind, yi in y_filled.iloc[:, i:].iteritems():
+    for yi_ind, yi in y.iloc[:, i:].iteritems():
         X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X), yi)
         X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
         pipe, X_test, y_test = utils.generate_1_pipe_auto(X_selected, yi, generations, population_size,
