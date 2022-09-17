@@ -123,9 +123,10 @@ class DataAlignment(BaseEstimator):
         # Y的始末月不能用，X对齐
         y_return = get_y()[1: -1]
         x = get_x()[1: -1]
-        # 插入资产收益
+        # X插入资产收益
         y_return.columns = y_return.columns.map(lambda x: x + '_returns')
         x = pd.concat([x, y_return], axis=1)
+        # TODO: y缺失早期数据的部分Xy切掉，但保留X的lag数据
         return x, y_return
 
     # TODO: 低优先级 周度align规则尚需手动完成

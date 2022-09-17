@@ -16,23 +16,47 @@ import utils_eda
 from pipe_models_base import *
 
 
+# 跨平台文件路径处理
+def get_path(file_name: str):
+    windows_dic = {
+        'data_x': r'.\data\data_x.csv',
+        'data_y': r'.\data\data_y.csv',
+        'to_month_table': r'.\data\to_month_table.xlsx',
+        'to_week_table': r'.\data\to_week_table.xlsx',
+        'info_table': r'.\data\info_table.csv',
+        'prepipe_data': r'data_dump\prepipe_data'
+    }
+
+    mac_dic = {
+        'data_x': './data/data_x.csv',
+        'data_y': './data/data_y.csv',
+        'to_month_table': './data/to_month_table.xlsx',
+        'to_week_table': './data/to_week_table.xlsx',
+        'info_table': './data/info_table.csv',
+        'prepipe_data': './data_dump/prepipe_data'
+    }
+
+    return windows_dic[file_name] if platform.system().lower() == 'windows' else mac_dic[file_name]
+
+
+
 # 针对wind excel数据复用
 # minor warning: wind下载的自定义合成指标没有完整的指标ID，列名有极小的概率重叠，其或造成feature丢失。8月19日版本数据暂无此问题。
 class GetStructuralData:
     # 对象存储数据（字典类型）和描述表，类方法功能包括1格式化（取值变更坐标）2将数据和描述表存入data文件夹
     def __init__(self, path_read, update=False):
         print('update:', update)
-        print('os.path.exists(csv):', os.path.exists(r'data/data_x.csv'))
+        print('os.path.exists(x&y csv):', os.path.exists(get_path('data_x') and os.path.exists(get_path('data_y'))))
         self.path_read = path_read
         self.update = update
-        if update and os.path.exists(r'data/data_x.csv'):
+        if update and os.path.exists(get_path('data_x')):
             self.raw_data = self.read_files()
             self.info = self.get_info(last_info_row=6)
             self.structural_data = self.get_sdata(last_info_row=6)
         else:
-            self.info = pd.read_csv(r'data/info_table.csv', index_col=0, parse_dates=True)
-            self.structural_data = {'x': pd.read_csv(r'data/data_x.csv', index_col=0, parse_dates=True),
-                                    'y': pd.read_csv(r'data/data_y.csv', index_col=0, parse_dates=True)}
+            self.info = pd.read_csv(get_path('info_table'), index_col=0, parse_dates=True)
+            self.structural_data = {'x': pd.read_csv(get_path('data_x'), index_col=0, parse_dates=True),
+                                    'y': pd.read_csv(get_path('data_y'), index_col=0, parse_dates=True)}
 
     def read_files(self):
         md_dic = pd.read_excel(self.path_read + r'\国内宏观.xlsx', engine="openpyxl", sheet_name=None)
@@ -72,8 +96,8 @@ class GetStructuralData:
         info_di = by_tablename('daily_indicators')
         info_da = by_tablename('daily_assets')
         info = pd.concat([info_md, info_mo, info_di, info_da])
-        if not os.path.exists(r'data/info_table.csv') or self.update:
-            info.to_csv(r'.\data\info_table.csv')
+        if not os.path.exists(get_path('info_table')) or self.update:
+            info.to_csv(get_path('info_table'))
         return info
 
     def get_sdata(self, last_info_row):
@@ -109,42 +133,47 @@ class GetStructuralData:
         data_di = by_tablename('daily_indicators')
         sdata_y = by_tablename('daily_assets')
         sdata_x = pd.concat([data_md, data_mo, data_di], axis=1)
-        if not os.path.exists(r'data/data_x.csv') or self.update:
-            sdata_x.to_csv(r'.\data\data_x.csv')
-            sdata_y.to_csv(r'.\data\data_y.csv')
+        if not os.path.exists(get_path('data_x')) or self.update:
+            sdata_x.to_csv(get_path('data_x'))
+            sdata_y.to_csv(get_path('data_y'))
         return {'x': sdata_x, 'y': sdata_y}
 
 
-def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_lag_x, begT, endT):
+def get_preproc_data(ori_data_path, if_update, use_cache, align_to, begT, endT):
+    cache_path = get_path('prepipe_data')
+    if align_to == 'month':
+        info_path = get_path('to_month_table')
+    elif align_to == 'week':
+        info_path = get_path('to_week_table')
+    else:
+        raise Exception('Please specify alignment frequency')
+
     if not use_cache:
         # 获取结构化数据实例，update为True则读取wind源数据，默认False读取之前保存的结构化数据文件
         s_data = GetStructuralData(ori_data_path, update=if_update)
         raw_x = s_data.structural_data['x'][begT:endT].copy()
         raw_y = s_data.structural_data['y'].iloc[::-1][begT:endT].copy()
 
-        # 预处理
-        info = pd.read_excel(r'.\data\to_month_table.xlsx', index_col=0,
-                             engine="openpyxl") if align_to == 'month' else \
-            pd.read_excel(r'.\data\to_week_table.xlsx', index_col=0, engine="openpyxl")
+        # 初步预处理
+        info = pd.read_excel(info_path, index_col=0, engine="openpyxl")
         pipe_preprocess = Pipeline(steps=[
             ('special_treatment', pipe_preproc.SpecialTreatment(info)),
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
-            # ('get_stationary', pipe_preproc.GetStationary(info)),
-            # 放到特征工程最后
-            #('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1))
         ])
 
         X, y = pipe_preprocess.fit_transform(raw_x, raw_y)
-
+        # 处理稳态不能用bfill过的X，selectFromModel中y不能有空
+        # TODO: 草率处理，严谨应该在data_alignment中完善逻辑
+        y_filled = y.fillna(method='ffill').fillna(method='bfill')
         print('...Pre-processing finished\n')
 
         # 缓存数据
-        with open('data_dump/prepipe_data', 'wb') as f:
-            pickle.dump((X, y), f)
+        with open(cache_path, 'wb') as f:
+            pickle.dump((X, y_filled), f)
         print('data pickle saved')
     else:
         # 读取缓存数据
-        with open('data_dump/prepipe_data', 'rb') as f:
+        with open(cache_path, 'rb') as f:
             (X, y) = pickle.load(f)
         print('data pickle loaded')
 
@@ -174,6 +203,7 @@ def generate_1_pipe_auto(X, y, generations, population_size, max_time_mins, cach
         pipeline_optimizer.export('./tpot_gen/separate_tpotpipe%d.py' % pipe_num)
 
     return pipeline_optimizer, X_test, y_test
+
 
 def generate_1_pipe(X, y, generations, population_size, max_time_mins, cachedir, tpot_config=None, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
@@ -346,24 +376,42 @@ tpot_config = {
 }
 
 
-def get_models_dump(X_train, y_train):
+def get_models_dump(X_train, y_train, version):
+    import pipe_FE
+    import copy
     models_num = 10
     models = []
     for i in range(0, models_num):
-        if not os.path.exists(r'models_dump/model%d_dump' % i):
-            eval('exported_pipeline%d' % i).fit(X_train, y_train.iloc[:, i])
-            with open('models_dump/model%d_dump' % i, 'wb') as f:
+        if version == 'benchmark':
+            file_path = r'models_dump/benchmark/model%d_dump' % i
+            yi = y_train.iloc[:, i]
+            # TODO：deprecated, 数据整个变了
+            X_selected = X_train
+        elif version == 'post_FE':
+            file_path = r'models_dump/post_FE/model%d_dump' % i
+            if not os.path.exists(file_path):
+                print('feature engineering before training')
+                X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X_train), y_train.iloc[:, i])
+                X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
+                print('feature engineering finished')
+        else:
+            raise Exception('Please specify the right version of models to get')
+
+        if not os.path.exists(file_path):
+            eval('exported_pipeline%d' % i).fit(X_selected, yi)
+            with open(file_path, 'wb') as f:
                 pickle.dump(eval('exported_pipeline%d' % i), f)
             models.append(eval('exported_pipeline%d' % i))
-            print('model%d pickle saved and appended' % i)
+            print('model %d pickle saved and appended' % i)
         else:
-            with open('models_dump/model%d_dump' % i, 'rb') as f:
+            with open(file_path, 'rb') as f:
                 models.append(pickle.load(f))
-            print('model%d pickle loaded' % i)
+            print('model %d pickle loaded' % i)
 
     return models
 
 
+# 该类中bench指等权组合，其他benchmark model需要将model list作为变量传入
 class Evaluator:
     def __init__(self, models, X_test, y_test, X_train, y_train):
         self.models = models
@@ -374,7 +422,7 @@ class Evaluator:
         self.y_train = y_train
         self.port_pos = self.get_port_pos()
         self.port_ret = self.get_port_ret()
-        self.bench0_ret = self.get_bench0_ret()
+        self.bench_ret = self.get_bench_ret()
 
     # 除了z-score还可以用percentile计算仓位
     def get_port_pos(self):
@@ -405,7 +453,7 @@ class Evaluator:
         return ret_df
 
     # 等权组合
-    def get_bench0_ret(self):
+    def get_bench_ret(self):
         weights = [1 / len(self.y_test.columns) for _ in self.y_test.columns]
         # TODO: 利率债的return应该取相反数，简单起见忽略票息
         ret_df = pd.DataFrame(index=self.y_test.index, columns=['return'])
@@ -414,18 +462,11 @@ class Evaluator:
         # TODO: 检查这个和实际是否一致，怎么感觉数太小了
         return ret_df
 
-    # benchmark models
-    def get_bench1_ret(self):
-        pass
-
     def get_port_worth(self):
         return return_to_worth(self.port_ret)
 
-    def get_bench0_worth(self):
-        return return_to_worth(self.bench0_ret)
-
-    def get_bench1_worth(self):
-        pass
+    def get_bench_worth(self):
+        return return_to_worth(self.bench_ret)
 
 
 # 月末净值
@@ -439,7 +480,7 @@ def return_to_worth(ret_df):
     return worth_df
 
 
-from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
+from sklearn.feature_selection import SelectFromModel, SelectKBest, mutual_info_regression
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
 
@@ -488,5 +529,4 @@ def get_garbage_features(selected_id):
 
 # TODO: 中优先级 帮助好像不大，放到preproc里
 def remove_garbage_data(X, selected_id):
-
     pass

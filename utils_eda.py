@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 system = platform.system().lower()
+
+
 def get_info():
     if system == 'windows':
         return pd.read_csv(r'.\data\info_table.csv', index_col=0, parse_dates=True)
@@ -17,21 +19,25 @@ def get_info():
         return pd.read_csv(abspath('data/info_table.csv'), index_col=0, parse_dates=True)
 
 
+# TODO: 简略凑合用，并不严谨
 def get_ori_id(id):
     if ')' in id:
-        id_ori = re.split(r"\)", id)[1]
-        if '_' in id_ori:
-            id_ori = re.split(r'_', id_ori)[0]
+        id_trimmed = re.split(r"\)", id)[1]
     else:
-        id_ori = id
+        id_trimmed = id
+    if '_' in id_trimmed:
+        id_ori = re.split(r'_', id_trimmed)[0]
+    else:
+        id_ori = id_trimmed
     return id_ori
 
 
 def is_ori_id(id):
-    if '_' in id:
+    if '_' or ')' in id:
         return False
     else:
         return True
+
 
 def get_ori_name(id, info):
     return info.loc[id, '指标名称']
@@ -117,6 +123,3 @@ def trans_series_name(sr):
 def trans_series_id(sr):
     transformed = copy.deepcopy(sr)
     return pd.Series(transformed).apply(get_ori_id)
-
-
-

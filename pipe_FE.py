@@ -9,13 +9,12 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 # from tsfresh.transformers import RelevantFeatureAugmenter
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA, TruncatedSVD
-from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
 import utils_eda, pipe_preproc
-
 
 
 # TODO　流程：get_stationary，transformcolumn(get_tsfresh, get_talib), (以上两个是并行的featureunion)
@@ -110,8 +109,6 @@ def get_ori_columns(X):
 # ])
 
 
-
-
 # 自定义一下把列名放回去，不过没有用，原生框架还是会丢
 class CustomPCA(PCA):
     def fit_transform(self, X, y=None):
@@ -175,4 +172,16 @@ union = FeatureUnion([("PCA", pipe1),
                       ('talibFE', MacroFE()),
                       ])
 
+from train_FE import use_lag_x
 
+FE_ppl = Pipeline([
+    # TODO: 其他特征是如何处理X的空值的？希望是直接跳过早期缺失数据的空值
+    ('features', union),
+    ('fillna', KNNImputer()),
+    ('scaler1', StandardScaler()),
+    ('select_40n', select_40n),
+    # TODO: 这步之前列名没了，列名好像有自己的传递机制。
+    # 自定义的pipe必须放在sklearn pipe最后，因为sk不支持对y的transform。
+    # 自定义的方法操作df，但是传入的是没有列名的ndarray，打了补丁
+    ('series_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_lag_x, n_out=1)),
+])
