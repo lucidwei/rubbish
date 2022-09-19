@@ -166,6 +166,8 @@ class GetStationary(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y=None):
+        if isinstance(X, tuple):
+            X, y = X
         print('...transforming GetStationary \n')
         # TODO: 低优先级 有些规律性空值的或许有计算差错（未验证猜想）
         df = deepcopy(X).fillna(method='ffill')

@@ -12,7 +12,8 @@ PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 ## 原始数据文件是否已经更新
 if_update = False
 ## 预处理逻辑(参数)变更/缓存的pickle需要更新时，设为False
-use_cache = True
+####一定要注意利用的数据格式，避免用本月行情预测本月行情。
+use_cache = False
 ## 预处理参数
 align_to = 'month'
 use_lag_x = 13

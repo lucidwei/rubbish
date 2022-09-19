@@ -153,16 +153,20 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
         raw_x = s_data.structural_data['x'][begT:endT].copy()
         raw_y = s_data.structural_data['y'].iloc[::-1][begT:endT].copy()
 
-        # 初步预处理
+        # 涉及y变换的sk不支持，要拆开
         info = pd.read_excel(info_path, index_col=0, engine="openpyxl")
-        pipe_preprocess = Pipeline(steps=[
+        pipe_preprocess0 = Pipeline(steps=[
             ('special_treatment', pipe_preproc.SpecialTreatment(info)),
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
+        ])
+        pipe_preprocess1 = Pipeline(steps=[
             ('station_origin', pipe_preproc.GetStationary()),
             ('ts_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_x_lags))
         ])
 
-        X, y = pipe_preprocess.fit_transform(raw_x, raw_y)
+        X0, y0 = pipe_preprocess0.fit_transform(raw_x, raw_y)
+        X, y = pipe_preprocess1.fit_transform(X0, y0)
+
         # 处理稳态不能用bfill过的X，selectFromModel中y不能有空
         # TODO: 草率处理，严谨应该在data_alignment中完善逻辑
         y_filled = y.fillna(method='ffill').fillna(method='bfill')
@@ -497,8 +501,8 @@ class Evaluator:
             pos_info.loc[col_ind, 'std'] = np.std(col)
         # 将预测收益率转化为z-score
         pos_z = pd.DataFrame(index=self.y_test.index, columns=self.y_test.columns)
-        i = 0
-        for col_ind, col in self.y_test.iteritems():
+        i = 0  # 起始资产
+        for col_ind, col in self.y_test.iloc[:,i:].iteritems():
             print('predicting test set for asset %d' % i)
             pred = self.models[i].predict(self.X_test)
             print('第%d个资产的样本外 r2 score:' % i, r2_score(col, pred))
