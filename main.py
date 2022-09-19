@@ -24,14 +24,12 @@ X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, use_lag_x, al
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     train_size=0.8, test_size=0.2,
                                                     shuffle=False)
-
+# TODO: 现在主要问题是用到未来数据了，次要问题是预处理剔除短数据。可能是model_dump的问题，换电脑重新训练试试
 models = utils.get_models_dump(X_train, y_train, version='post_FE')
 evaluator = utils.Evaluator(models, X_test, y_test, X_train, y_train)
 
-port_position = evaluator.get_port_pos()
-port_return = evaluator.get_port_ret()
+port_position, port_return, bench_return = evaluator.initializer()
 port_worth = evaluator.get_port_worth()
-bench_return = evaluator.get_bench_ret()
 bench_worth = evaluator.get_bench_worth()
 
 # 画图见notebook
@@ -39,7 +37,5 @@ port_position.plot()
 port_worth.plot()
 bench_worth.plot()
 
-# bench1_return = evaluator.get_bench1_ret()
 # excess_return = port_return - bench0_return
 #
-# eda.plot_multi_arrays()

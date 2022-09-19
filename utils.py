@@ -464,7 +464,7 @@ def get_models_dump(X_train, y_train, version):
 #
 #     return models, X_test, y_test, X_train, y_train # 这个也不行啊，返回的是单个模型的数据
 
-
+from sklearn.metrics import r2_score
 # 该类中bench指等权组合，其他benchmark model需要将model list作为变量传入
 class Evaluator:
     def __init__(self, models, X_test, y_test, X_train, y_train):
@@ -478,6 +478,9 @@ class Evaluator:
         self.port_ret = self.get_port_ret()
         self.bench_ret = self.get_bench_ret()
 
+    def initializer(self):
+        return self.port_pos, self.port_ret, self.bench_ret
+
     # 除了z-score还可以用percentile计算仓位
     def get_port_pos(self):
         # 对y_train求z-score时得到均值标准差，再针对pred和y_test normalize
@@ -488,8 +491,10 @@ class Evaluator:
         # 将预测收益率转化为z-score
         pos_z = pd.DataFrame(index=self.y_test.index, columns=self.y_test.columns)
         i = 0
-        for col_ind in self.y_test.columns:
+        for col_ind, col in self.y_test.iteritems():
+            print('predicting test set for asset %d' % i)
             pred = self.models[i].predict(self.X_test)
+            print('第%d个资产的样本外 r2 score:' % i, r2_score(col, pred))
             pos_z.iloc[:, i] = (pred - pos_info.loc[col_ind, 'avg']) / pos_info.loc[col_ind, 'std']
             i += 1
         # z-score转化为position
