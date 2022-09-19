@@ -32,7 +32,8 @@ class Evaluator:
         i = 0
         for col_ind, col in self.y_test.iteritems():
             print('predicting test set for asset %d' % i)
-            pred, predtrans_history = self.models[i].predict(self.X_test)
+            # pred, predtrans_history = self.models[i].predict(self.X_test)
+            pred = self.models[i].predict(self.X_test)
             print('第%d个资产的样本外 r2 score:' % i, r2_score(col, pred))
             pos_z.iloc[:, i] = (pred - pos_info.loc[col_ind, 'avg']) / pos_info.loc[col_ind, 'std']
             i += 1
