@@ -24,6 +24,8 @@ X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, use_lag_x, al
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     train_size=0.8, test_size=0.2,
                                                     shuffle=False)
+# 增加测试集长度使得FE得以进行
+X_test, y_test = utils.add_2years_test(X_train, X_test, y_train, y_test)
 # TODO: 现在主要问题是用到未来数据了，次要问题是预处理剔除短数据。可能是model_dump的问题，换电脑重新训练试试
 models = utils.get_models_dump(X_train, y_train, version='post_FE')
 evaluator = utils.Evaluator(models, X_test, y_test, X_train, y_train)

@@ -181,6 +181,13 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
     return X, y
 
 
+def add_2years_test(X_train, X_test, y_train, y_test):
+    # 先默认月度数据
+    X_test = pd.concat([X_train.iloc[-24:, :], X_test])
+    y_test = pd.concat([y_train.iloc[-24:, :], y_test])
+    return X_test, y_test
+
+
 def generate_1_pipe_auto(X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         train_size=0.8, test_size=0.2,
