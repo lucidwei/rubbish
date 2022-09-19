@@ -5,6 +5,7 @@ import pickle, datetime
 from sklearn.model_selection import train_test_split
 import utils_eda
 import utils
+from evaluator import Evaluator
 
 
 # Configuration

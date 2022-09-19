@@ -54,6 +54,7 @@ import utils_eda, pipe_preproc
 # 模仿preproc里生成新数据，调talib。肯定会产生空值，去空值好像series_to_supervised可以做。
 class MacroFE(BaseEstimator, TransformerMixin):
     def __init__(self):
+        self.names_out = None
         print('...initializing MacroFE\n')
 
     def fit(self, X, y=None):
@@ -66,7 +67,11 @@ class MacroFE(BaseEstimator, TransformerMixin):
         for col_ind, col in X_df.iteritems():
             gen_i = single_generator(col_ind, col, type='macro')
             gen = pd.concat([gen, gen_i], axis=1)
+        self.names_out = gen.columns
         return gen
+
+    def get_feature_names_out(self, input_features=None):
+        return self.names_out
 
 
 # TODO: 可以把high low等加进来，可以生成更多特征
@@ -93,7 +98,7 @@ def single_generator(col_ind, feature_ori, type: str):
     return generated_df
 
 
-# 暂时不用，先不区分macro和asset
+# 暂时没用，先不区分macro和asset
 def get_asset_columns():
     info = utils_eda.get_info()
     mask = np.append(np.zeros(len(info.index) - 11, dtype=bool), np.ones(10, dtype=bool))
@@ -154,8 +159,6 @@ select_20n = FeatureUnion([
     ('mi1', SelectKBest(score_func=mutual_info_regression, k=num_20))
 ])
 
-
-
 ###################这是理想的pipeline但是实现起来太麻烦，因为自定义的pipeline不容易放在sklearn里
 # union1 = FeatureUnion([
 #     ("pca", CustomPCA(n_components=2)),
@@ -194,10 +197,10 @@ select_20n = FeatureUnion([
 
 # 以下是纯sklearn pipeline
 union = FeatureUnion([
-            ('self', FunctionTransformer(copy.deepcopy)),
-            ("pca", PCA(n_components=2)),
-            ("svd", TruncatedSVD(n_components=2)),
-            ('talibFE', MacroFE()),
+    ('self', FunctionTransformer(copy.deepcopy, feature_names_out="one-to-one")),
+    ("pca", PCA(n_components=2)),
+    ("svd", TruncatedSVD(n_components=2)),
+    ('talibFE', MacroFE()),
 ])
 
 FE_ppl = Pipeline([
