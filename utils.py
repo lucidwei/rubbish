@@ -395,7 +395,7 @@ tpot_config = {
 }
 
 
-def get_models_dump(X_train, y_train, version):
+def get_models_dump(X_train, y_train, version, force_train):
     import pipe_FE
     import copy
 
@@ -425,7 +425,7 @@ def get_models_dump(X_train, y_train, version):
 
         yi = y_train.iloc[:, i].copy(deep=True)
 
-        if not os.path.exists(file_path):
+        if not os.path.exists(file_path) or force_train:
             whole_ppl = make_pipeline(
                 pipe_FE.FE_ppl,
                 eval(prefix + 'exported_pipeline%d' % i)

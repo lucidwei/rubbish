@@ -16,9 +16,12 @@ class Evaluator:
         self.port_pos = self.get_port_pos()
         self.port_ret = self.get_port_ret()
         self.bench_ret = self.get_bench_ret()
+        self.port_worth = self.get_port_worth()
+        self.bench_worth = self.get_bench_worth()
+        self.excess_ann_ret = self.get_excess_ann_ret()
 
     def initializer(self):
-        return self.port_pos, self.port_ret, self.bench_ret
+        return self.port_pos, self.port_ret, self.bench_ret, self.port_worth, self.bench_worth, self.excess_ann_ret
 
     # 除了z-score还可以用percentile计算仓位
     def get_port_pos(self):
@@ -66,6 +69,11 @@ class Evaluator:
 
     def get_bench_worth(self):
         return return_to_worth(self.bench_ret)
+
+    def get_excess_ann_ret(self):
+        bench_annual = 12*self.bench_ret.mean()
+        port_annual = 12*self.port_ret.mean()
+        return port_annual-bench_annual
 
 
 # 月末净值
