@@ -160,19 +160,19 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
             ('special_treatment', pipe_preproc.SpecialTreatment(info)),
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
         ])
-        pipe_preprocess1 = Pipeline(steps=[
-            # 处理稳态不能用bfill过的X
-            ('station_origin', pipe_preproc.GetStationary()),
-            # 丢失坐标
-            ('imputer', KNNImputer()),
-            ('ts_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_x_lags))
-        ])
+        # pipe_preprocess1 = Pipeline(steps=[
+        #     # 处理稳态不能用bfill过的X
+        #     ('station_origin', pipe_preproc.GetStationary()),
+        #     # 丢失坐标
+        #     ('imputer', KNNImputer()),
+        #     ('ts_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_x_lags))
+        # ])
 
         X0, y0 = pipe_preprocess0.fit_transform(raw_x, raw_y)
         X1 = pipe_preproc.GetStationary().transform(X0)
-        X2 = KNNImputer().transform(X1)
-        X2.index, X2.columns = X1.index, X1.columns
-        X, y = pipe_preproc.SeriesToSupervised(n_in=use_x_lags).transform(X2, y0)
+        X2 = KNNImputer().fit_transform(X1)
+        X3 = pd.DataFrame(X2,index=X1.index, columns=X1.columns)
+        X, y = pipe_preproc.SeriesToSupervised(n_in=use_x_lags).transform(X3, y0)
 
         # selectFromModel中y不能有空
         # TODO: 草率处理，严谨应该在data_alignment中完善逻辑
