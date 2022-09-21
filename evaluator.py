@@ -6,9 +6,9 @@ from sklearn.metrics import r2_score
 
 # 该类中bench指等权组合，其他benchmark model需要将model list作为变量传入
 class Evaluator:
-    def __init__(self, models, X_test, y_test, X_train, y_train):
+    def __init__(self, models, X_test_long, y_test, X_train, y_train):
         self.models = models
-        self.X_test = X_test
+        self.X_test_long = X_test_long
         self.y_test = y_test
         # 训练集净值、position需要train data
         self.X_train = X_train
@@ -30,11 +30,12 @@ class Evaluator:
         # 将预测收益率转化为z-score
         pos_z = pd.DataFrame(index=self.y_test.index, columns=self.y_test.columns)
         i = 0
-        for col_ind, col in self.y_test.iteritems():
+        for col_ind, real in self.y_test.iteritems():
             print('predicting test set for asset %d' % i)
-            pred, predtrans_history = self.models[i].predict(self.X_test)
-            print('第%d个资产的样本外 r2 score:' % i, r2_score(col, pred))
-            pos_z.iloc[:, i] = (pred - pos_info.loc[col_ind, 'avg']) / pos_info.loc[col_ind, 'std']
+            pred = self.models[i].predict(self.X_test_long)
+            pred_short = pred[-len(real):]
+            print('第%d个资产的样本外 r2 score:' % i, r2_score(real, pred_short))
+            pos_z.iloc[:, i] = (pred_short - pos_info.loc[col_ind, 'avg']) / pos_info.loc[col_ind, 'std']
             i += 1
         # z-score转化为position
         pos = pd.DataFrame(index=pos_z.index, columns=pos_z.columns)

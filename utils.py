@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.impute import KNNImputer
 from tpot import TPOTRegressor
 from joblib import Memory
 import pipe_preproc
@@ -160,14 +161,20 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
         ])
         pipe_preprocess1 = Pipeline(steps=[
+            # 处理稳态不能用bfill过的X
             ('station_origin', pipe_preproc.GetStationary()),
+            # 丢失坐标
+            ('imputer', KNNImputer()),
             ('ts_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_x_lags))
         ])
 
         X0, y0 = pipe_preprocess0.fit_transform(raw_x, raw_y)
-        X, y = pipe_preprocess1.fit_transform(X0, y0)
+        X1 = pipe_preproc.GetStationary().transform(X0)
+        X2 = KNNImputer().transform(X1)
+        X2.index, X2.columns = X1.index, X1.columns
+        X, y = pipe_preproc.SeriesToSupervised(n_in=use_x_lags).transform(X2, y0)
 
-        # 处理稳态不能用bfill过的X，selectFromModel中y不能有空
+        # selectFromModel中y不能有空
         # TODO: 草率处理，严谨应该在data_alignment中完善逻辑
         y_filled = y.fillna(method='ffill').fillna(method='bfill')
         print('...Pre-processing finished\n')
@@ -185,11 +192,11 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
     return X, y
 
 
-def add_2years_test(X_train, X_test, y_train, y_test):
+def add_2years_test(X_train, X_test):
     # 先默认月度数据
-    X_test = pd.concat([X_train.iloc[-24:, :], X_test])
-    y_test = pd.concat([y_train.iloc[-24:, :], y_test])
-    return X_test, y_test
+    X_test = pd.concat([X_train.iloc[-26:, :], X_test])
+    # y_test = pd.concat([y_train.iloc[-24:, :], y_test])
+    return X_test
 
 
 def generate_1_pipe_auto(X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):

@@ -126,7 +126,16 @@ class DataAlignment(BaseEstimator):
         # X插入资产收益
         y_return.columns = y_return.columns.map(lambda x: x + '_returns')
         x = pd.concat([x, y_return], axis=1)
-        # TODO: y缺失早期数据的部分Xy切掉，但保留X的lag数据
+        # 删除2014年之前小于10个数据的列并打印，否则getstationary报错
+        # 玛德MLF利率都drop了，有点不甘心
+        # info = utils_eda.get_info()
+        # num_drop = 0
+        # for col_ind, col in x.iteritems():
+        #     if col[:'2014'].notnull().sum() < 10:
+        #         x.drop(col_ind, axis=1, inplace=True)
+        #         num_drop += 1
+        #         print(col_ind, utils_eda.get_ori_name(col_ind, info), 'dropped because too few data before 2014')
+        # print('%d items dropped in total'%num_drop)
         return x, y_return
 
     # TODO: 低优先级 周度align规则尚需手动完成
@@ -166,8 +175,6 @@ class GetStationary(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y=None):
-        if isinstance(X, tuple):
-            X, y = X
         print('...transforming GetStationary \n')
         # TODO: 低优先级 有些规律性空值的或许有计算差错（未验证猜想）
         df = deepcopy(X).fillna(method='ffill')
@@ -178,7 +185,9 @@ class GetStationary(BaseEstimator, TransformerMixin):
         for col_ind, col in df.iteritems():
             # 非稳态且单位非'%'才进行操作
             ori_id = get_ori_id(col_ind)
-            if record[col_ind] != 'stationary' and self.info.loc[ori_id, '单位'] != '%':
+            if col[:'2014'].notnull().sum() < 10:
+                print(col_ind, utils_eda.get_ori_name(col_ind, self.info), ' too few data before 2014, need imputer')
+            elif record[col_ind] != 'stationary' and self.info.loc[ori_id, '单位'] != '%':
                 stl = STL(col.dropna(), period=12, robust=True)
                 decomposed = stl.fit()
                 df.insert(df.columns.get_loc(col_ind) + 1, column=col_ind + '_trend', value=decomposed.trend)
@@ -284,13 +293,6 @@ class SeriesToSupervised(BaseEstimator):
             combined.dropna(inplace=True)
             X = combined.iloc[:, :-y_df.shape[1]]
             y = combined.iloc[:, -y_df.shape[1]:]
-            # # drop rows with NaN values
-            # X.dropna(inplace=True)
-            # y.dropna(inplace=True)
-            # # 只保留x y共有的日期
-            # common_ind = X.index.intersection(y.index)
-            # X = X.loc[common_ind]
-            # y = y.loc[common_ind]
 
         return X, y
 
