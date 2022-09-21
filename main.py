@@ -2,11 +2,10 @@
 
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import pickle, datetime
-from sklearn.model_selection import train_test_split
-import utils_eda
-import utils
+from sklearn.model_selection import train_test_split, TimeSeriesSplit
+import pandas as pd
+import utils, utils_eda
 from evaluator import Evaluator
-
 
 # Configuration
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
@@ -14,7 +13,7 @@ PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 if_update = False
 ## 预处理逻辑(参数)变更/缓存的pickle需要更新时，设为False
 ####一定要注意利用的数据格式，避免用本月行情预测本月行情。
-use_cache = False
+use_cache = True
 ## 预处理参数
 align_to = 'month'
 use_lag_x = 13
@@ -23,23 +22,46 @@ endT = datetime.date.today()
 
 X, y = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, use_lag_x, align_to, begT, endT)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                    train_size=0.8, test_size=0.2,
-                                                    shuffle=False)
+tscv = TimeSeriesSplit()
+eval_list = []
+for train_index, test_index in tscv.split(X):
+    if X.index[len(train_index)] < pd.Period('2014-1'):
+        continue
+    else:
+        X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
+        y_train, y_test = y.iloc[train_index, :], y.iloc[test_index, :]
+        print("TRAIN period:", str(X_train.index[0]), '->', str(X_train.index[-1]),
+              "\nTEST period:", str(X_test.index[0]), '->', str(X_test.index[-1]), "\nStart......")
+        # 增加测试集长度使得FE得以进行
+        X_test_long = utils.add_2years_test(X_train, X_test)
+        # 因为每个split筛选出的特征不一样，所以必须重新训练
+        models = utils.get_models_dump(X_train, y_train, version='post_FE', force_train=True)
+
+        evaluator = Evaluator(models, X_test_long, y_test, X_train, y_train)
+        eval_list.append(evaluator)
+        print("Test period:", str(X_test.index[0]), '->', str(X_test.index[-1]), "的年化超额收益为:", str(evaluator.excess_ann_ret))
+
+        # port_position, port_return, bench_return, port_worth, bench_worth, excess_ann_ret = evaluator.initializer()
+
+
+
+
+
+
+
+
+
+
+
+
+
 # 增加测试集长度使得FE得以进行
-X_test_long = utils.add_2years_test(X_train, X_test)
-models = utils.get_models_dump(X_train, y_train, version='post_FE')
-
-evaluator = Evaluator(models, X_test_long, y_test, X_train, y_train)
-
-port_position, port_return, bench_return = evaluator.initializer()
-port_worth = evaluator.get_port_worth()
-bench_worth = evaluator.get_bench_worth()
+# X_test_long = utils.add_2years_test(X_train, X_test)
+# models = utils.get_models_dump(X_train, y_train, version='post_FE')
+#
+# evaluator = Evaluator(models, X_test_long, y_test, X_train, y_train)
+#
+# port_position, port_return, bench_return, port_worth, bench_worth = evaluator.initializer()
 
 # 画图见notebook
-port_position.plot()
-port_worth.plot()
-bench_worth.plot()
 
-# excess_return = port_return - bench0_return
-#
