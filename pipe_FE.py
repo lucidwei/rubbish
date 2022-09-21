@@ -207,6 +207,7 @@ FE_ppl = Pipeline([
     ('fillna0', KNNImputer()),
     ('scaler0', StandardScaler()),
     ('select_40n', select_40n),
+    # 通过增加测试集，使得测试集能用到训练集的部分近期数据来生成feature
     ('feature_gen', union),
     ('fillna1', KNNImputer()),
     ('scaler1', StandardScaler()),
