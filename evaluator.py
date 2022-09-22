@@ -1,4 +1,5 @@
 # coding=gbk
+import copy
 import pandas as pd
 import numpy as np
 from sklearn.metrics import r2_score
@@ -65,10 +66,14 @@ class Evaluator:
         return ret_df
 
     def get_port_worth(self):
-        return return_to_worth(self.port_ret)
+        pw = return_to_worth(self.port_ret)
+        pw.columns = ['port_worth']
+        return pw
 
     def get_bench_worth(self):
-        return return_to_worth(self.bench_ret)
+        bw = return_to_worth(self.bench_ret)
+        bw.columns = ['bench_worth']
+        return bw
 
     def get_excess_ann_ret(self):
         bench_annual = 12*self.bench_ret.mean()
@@ -85,3 +90,12 @@ def return_to_worth(ret_df):
         else:
             worth_df.iloc[i, 0] = (1 + ret_df.iloc[i, 0]) * worth_df.iloc[i - 1, 0]
     return worth_df
+
+
+def get_continue_worth(ws):
+    ws = copy.deepcopy(ws)
+    con = [ws[0]]
+    for i in range(1, len(ws)):
+        ws[i] = ws[i] * ws[i-1].iloc[-1, :]
+        con.append(ws[i])
+    return con
