@@ -10,7 +10,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.impute import KNNImputer
-from tpot import TPOTRegressor
+from tpot import TPOTRegressor, TPOTClassifier
 from joblib import Memory
 import pipe_preproc
 import utils_eda
@@ -24,7 +24,8 @@ def get_path(file_name: str):
         'to_month_table': r'.\data\to_month_table.xlsx',
         'to_week_table': r'.\data\to_week_table.xlsx',
         'info_table': r'.\data\info_table.csv',
-        'prepipe_data': r'data_dump\prepipe_data'
+        'prepipe_data': r'data_dump\prepipe_data',
+        'cachedir': 'C:\\Downloads\\tpot_cache'
     }
 
     mac_dic = {
@@ -33,11 +34,11 @@ def get_path(file_name: str):
         'to_month_table': './data/to_month_table.xlsx',
         'to_week_table': './data/to_week_table.xlsx',
         'info_table': './data/info_table.csv',
-        'prepipe_data': './data_dump/prepipe_data'
+        'prepipe_data': './data_dump/prepipe_data',
+        'cachedir': abspath('../../Documents/tpot_cache')
     }
 
     return windows_dic[file_name] if platform.system().lower() == 'windows' else mac_dic[file_name]
-
 
 
 # 针对wind excel数据复用
@@ -171,7 +172,7 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
         X0, y0 = pipe_preprocess0.fit_transform(raw_x, raw_y)
         X1 = pipe_preproc.GetStationary().transform(X0)
         X2 = KNNImputer().fit_transform(X1)
-        X3 = pd.DataFrame(X2,index=X1.index, columns=X1.columns)
+        X3 = pd.DataFrame(X2, index=X1.index, columns=X1.columns)
         X, y = pipe_preproc.SeriesToSupervised(n_in=use_x_lags).transform(X3, y0)
 
         # selectFromModel中y不能有空
@@ -192,6 +193,16 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
     return X, y
 
 
+def reg_to_class(y, tile_num):
+    df = pd.DataFrame(index=y.index, columns=y.columns)
+    if tile_num == 3:
+        for col_ind, col in y.iteritems():
+            df.loc[:, col_ind] = pd.qcut(col, 3, labels=['低配', '持平', '超配'])
+    else:
+        raise Exception('其他分类暂不支持')
+    return df
+
+
 def add_2years_test(X_train, X_test):
     # 先默认月度数据
     X_test = pd.concat([X_train.iloc[-26:, :], X_test])
@@ -199,21 +210,32 @@ def add_2years_test(X_train, X_test):
     return X_test
 
 
-def generate_1_pipe_auto(X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):
+def generate_1_pipe_auto(if_class, X, y, generations, population_size, max_time_mins, cachedir, pipe_num=None):
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         train_size=0.8, test_size=0.2,
                                                         shuffle=False)
     memory = Memory(location=cachedir, verbose=0)
     cv = TimeSeriesSplit()
-    pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=cv,
-                                       scoring='r2',
-                                       early_stop=20,
-                                       max_time_mins=max_time_mins,
-                                       memory=memory,
-                                       warm_start=True,
-                                       periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
-                                       log_file=abspath('../../Documents/tpot_log/log' + str(pipe_num)),
-                                       random_state=1996, verbosity=3)
+    if not if_class:
+        pipeline_optimizer = TPOTRegressor(generations=generations, population_size=population_size, cv=cv,
+                                           scoring='r2',
+                                           early_stop=20,
+                                           max_time_mins=max_time_mins,
+                                           memory=memory,
+                                           warm_start=True,
+                                           periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
+                                           log_file=abspath('../../Documents/tpot_log/log' + str(pipe_num)),
+                                           random_state=1996, verbosity=3)
+    else:
+        pipeline_optimizer = TPOTClassifier(generations=generations, population_size=population_size, cv=cv,
+                                            early_stop=10,
+                                            max_time_mins=max_time_mins,
+                                            memory=memory,
+                                            warm_start=True,
+                                            periodic_checkpoint_folder=abspath('../../Documents/tpot_checkpoint'),
+                                            log_file=abspath('../../Documents/tpot_log/log' + str(pipe_num)),
+                                            random_state=1996, verbosity=3)
+
     pipeline_optimizer.fit(X_train, y_train)
     print('A pipe finised, score(X_test, y_test):', pipeline_optimizer.score(X_test, y_test))
     if pipe_num is None:
@@ -412,14 +434,14 @@ def get_models_dump(X_train, y_train, version, force_train):
             file_path = r'models_dump/post_FE/model%d_dump' % i
 
             # if not os.path.exists(file_path):
-                # 这样搞不行，没法得到测试数据。这种数据降维流程上必须训练测试一起transform。
-                # TODO：虽然有未来数据的嫌疑，但这样能节省很多transform的时间。而且目前我还不知如何把y放到ppl里
-                # 正常流程是train训练集，然后测试集按fitted的pipeline直接transform。但是fit怎么写我尚不清楚
-                # 可以这样，get_stationary放回预处理里，to_supervised放到ppl中
-                # print('feature engineering before training')
-                # X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X_train), y_train.iloc[:, i])
-                # X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
-                # print('feature engineering finished')
+            # 这样搞不行，没法得到测试数据。这种数据降维流程上必须训练测试一起transform。
+            # TODO：虽然有未来数据的嫌疑，但这样能节省很多transform的时间。而且目前我还不知如何把y放到ppl里
+            # 正常流程是train训练集，然后测试集按fitted的pipeline直接transform。但是fit怎么写我尚不清楚
+            # 可以这样，get_stationary放回预处理里，to_supervised放到ppl中
+            # print('feature engineering before training')
+            # X_supervised, yi = pipe_FE.FE_ppl.fit_transform(copy.deepcopy(X_train), y_train.iloc[:, i])
+            # X_selected = pipe_FE.select_20n.fit_transform(X_supervised, yi)
+            # print('feature engineering finished')
         else:
             raise Exception('Please specify the right version of models to get')
 
@@ -441,6 +463,7 @@ def get_models_dump(X_train, y_train, version, force_train):
             print('model %d pickle loaded' % i)
 
     return models
+
 
 # 这个补丁应该是打不成了，还是正常流程吧
 # def get_models_dump_patch(X_train, y_train, version):

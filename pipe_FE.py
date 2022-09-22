@@ -14,7 +14,7 @@ from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.feature_selection import SelectFromModel, SelectKBest, f_regression, r_regression, mutual_info_regression
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import LinearRegression, SGDRegressor, RidgeCV
-import utils_eda, pipe_preproc
+import utils_eda
 
 
 # TODO　流程：get_stationary，transformcolumn(get_tsfresh, get_talib), (以上两个是并行的featureunion)
@@ -137,6 +137,9 @@ class CustomLinearRegression(LinearRegression):
             X, y = X
         return super().fit(X, y)
 
+from sklearn.feature_selection import f_classif, mutual_info_classif
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegressionCV, RidgeClassifierCV, SGDClassifier, Perceptron
 
 num_select = 40
 select_40n = FeatureUnion([
@@ -148,15 +151,32 @@ select_40n = FeatureUnion([
     # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
     ('mi0', SelectKBest(score_func=mutual_info_regression, k=num_select))
 ])
+select_40n_cls = FeatureUnion([
+    ('lr0', SelectFromModel(estimator=LogisticRegressionCV(), max_features=num_select)),
+    ('ridge0', SelectFromModel(estimator=RidgeClassifierCV(), max_features=num_select)),
+    ('sgd0', SelectFromModel(estimator=SGDClassifier(), max_features=num_select)),
+    ('rf0', SelectFromModel(estimator=RandomForestClassifier(random_state=1996), max_features=num_select)),
+    ('gbr0', SelectFromModel(estimator=GradientBoostingClassifier(random_state=1996), max_features=num_select)),
+    # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
+    ('mi0', SelectKBest(score_func=mutual_info_classif, k=num_select))
+])
 
 num_20 = 20
 select_20n = FeatureUnion([
-    ('lr1', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_20)),
+    ('lr1', SelectFromModel(estimator=LogisticRegressionCV(), max_features=num_20)),
     ('ridge1', SelectFromModel(estimator=RidgeCV(), max_features=num_20)),
     ('sgd1', SelectFromModel(estimator=SGDRegressor(), max_features=num_20)),
     ('rf1', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_20)),
     ('gbr1', SelectFromModel(estimator=GradientBoostingRegressor(random_state=1996), max_features=num_20)),
     ('mi1', SelectKBest(score_func=mutual_info_regression, k=num_20))
+])
+select_20n_cls = FeatureUnion([
+    ('lr1', SelectFromModel(estimator=LogisticRegressionCV(), max_features=num_20)),
+    ('ridge1', SelectFromModel(estimator=RidgeClassifierCV(), max_features=num_20)),
+    ('sgd1', SelectFromModel(estimator=SGDClassifier(), max_features=num_20)),
+    ('rf1', SelectFromModel(estimator=RandomForestClassifier(random_state=1996), max_features=num_20)),
+    ('gbr1', SelectFromModel(estimator=GradientBoostingClassifier(random_state=1996), max_features=num_20)),
+    ('mi1', SelectKBest(score_func=mutual_info_classif, k=num_20))
 ])
 
 ###################这是理想的pipeline但是实现起来太麻烦，因为自定义的pipeline不容易放在sklearn里
@@ -212,4 +232,15 @@ FE_ppl = Pipeline([
     ('fillna1', KNNImputer()),
     ('scaler1', StandardScaler()),
     ('select_20n', select_20n),
+])
+
+FE_ppl_cls = Pipeline([
+    ('fillna0', KNNImputer()),
+    ('scaler0', StandardScaler()),
+    ('select_40n', select_40n_cls),
+    # 通过增加测试集，使得测试集能用到训练集的部分近期数据来生成feature
+    ('feature_gen', union),
+    ('fillna1', KNNImputer()),
+    ('scaler1', StandardScaler()),
+    ('select_20n', select_20n_cls),
 ])
