@@ -432,6 +432,10 @@ def get_models_dump(X_train, y_train, version, force_train):
             import pipe_models_FE
             prefix = 'pipe_models_FE.'
             file_path = r'models_dump/post_FE/model%d_dump' % i
+        elif version == 'cls':
+            import pipe_models_cls
+            prefix = 'pipe_models_cls.'
+            file_path = r'models_dump/classif/model%d_dump' % i
 
             # if not os.path.exists(file_path):
             # 这样搞不行，没法得到测试数据。这种数据降维流程上必须训练测试一起transform。
@@ -448,11 +452,20 @@ def get_models_dump(X_train, y_train, version, force_train):
         yi = y_train.iloc[:, i].copy(deep=True)
 
         if not os.path.exists(file_path) or force_train:
-            whole_ppl = make_pipeline(
-                pipe_FE.FE_ppl,
-                eval(prefix + 'exported_pipeline%d' % i)
-            )
-            whole_ppl.fit(X_train.copy(deep=True), yi)
+            if version != 'cls':
+                whole_ppl = make_pipeline(
+                    pipe_FE.FE_ppl,
+                    eval(prefix + 'exported_pipeline%d' % i)
+                )
+                whole_ppl.fit(X_train.copy(deep=True), yi)
+            else:
+                whole_ppl = make_pipeline(
+                    pipe_FE.FE_ppl_cls,
+                    eval(prefix + 'exported_pipeline%d' % i)
+                )
+                whole_ppl.fit(X_train.copy(deep=True), yi)
+
+            # 写入缓存
             with open(file_path, 'wb') as f:
                 pickle.dump(whole_ppl, f)
             models.append(whole_ppl)
