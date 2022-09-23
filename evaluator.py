@@ -14,6 +14,7 @@ class Evaluator:
         self.y_test = y_test
         self.y_ret = y_ret
         # 训练集净值、position需要train data
+        self.scores = {}
         self.X_train = X_train
         self.y_train = y_train
         self.port_pos = self.get_port_pos()
@@ -41,7 +42,9 @@ class Evaluator:
                 print('predicting test set for asset %d' % i)
                 pred = self.models[i].predict(self.X_test_long)
                 pred_short = pred[-len(real):]
-                print('第%d个资产的样本外 r2 score:' % i, r2_score(real, pred_short))
+                score = r2_score(real, pred_short)
+                print('第%d个资产的样本外 r2 score:' % i, score)
+                self.scores['第%d个资产:' % i] = score
                 pos_z.iloc[:, i] = (pred_short - pos_info.loc[col_ind, 'avg']) / pos_info.loc[col_ind, 'std']
                 i += 1
             # z-score转化为position
@@ -57,7 +60,9 @@ class Evaluator:
                 print('predicting test set for asset %d' % i)
                 pred = self.models[i].predict(self.X_test_long)
                 pred_short = pred[-len(real):]
-                print('第%d个资产的样本外 accuracy score:' % i, accuracy_score(real, pred_short))
+                score = accuracy_score(real, pred_short)
+                print('第%d个资产的样本外 accuracy score:' % i, score)
+                self.scores['第%d个资产:' % i] = score
                 pos_z.iloc[:, i] = [1 if i==2 else 0 for i in pred_short]
                 i += 1
             # 对筛选出来的进行等权配置

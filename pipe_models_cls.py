@@ -61,8 +61,8 @@ exported_pipeline7 = make_pipeline(
 )
 exported_pipeline8 = make_pipeline(
     VarianceThreshold(threshold=0.01),
-    OneHotEncoder(minimum_fraction=0.2, sparse=False, threshold=10),
-    OneHotEncoder(minimum_fraction=0.2, sparse=False, threshold=10),
+    # OneHotEncoder(minimum_fraction=0.2, sparse=False, threshold=10),
+    # OneHotEncoder(minimum_fraction=0.2, sparse=False, threshold=10),
     SGDClassifier(alpha=0.001, eta0=0.1, fit_intercept=False, l1_ratio=0.75, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=100.0)
 )
 exported_pipeline9 = make_pipeline(

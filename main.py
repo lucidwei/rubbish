@@ -48,7 +48,7 @@ for train_index, test_index in tscv.split(X):
         evaluator = Evaluator(models, if_cls, X_test_long, y_test, y_return, X_train, y_train)
         eval_list.append(evaluator)
         print("Test period:", str(X_test.index[0]), '->', str(X_test.index[-1]), "的年化超额收益为:", str(evaluator.excess_ann_ret))
-
+        print('------------------分割线--------------------')
         # port_position, port_return, bench_return, port_worth, bench_worth, excess_ann_ret = evaluator.initializer()
 
 
