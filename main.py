@@ -36,6 +36,7 @@ for train_index, test_index in tscv.split(X):
     else:
         X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
         y_train, y_test = y.iloc[train_index, :], y.iloc[test_index, :]
+        y_return = y_ret.loc[y_test.index, :]
         print('------------------分割线--------------------')
         print("TRAIN period:", str(X_train.index[0]), '->', str(X_train.index[-1]),
               "\nTEST period:", str(X_test.index[0]), '->', str(X_test.index[-1]), "\nStart......")
@@ -44,7 +45,7 @@ for train_index, test_index in tscv.split(X):
         # 因为每个split筛选出的特征不一样，所以必须重新训练。False force_train为了快速迭代
         models = utils.get_models_dump(X_train, y_train, version='cls', force_train=False)
 
-        evaluator = Evaluator(models, if_cls, X_test_long, y_test, y_ret, X_train, y_train)
+        evaluator = Evaluator(models, if_cls, X_test_long, y_test, y_return, X_train, y_train)
         eval_list.append(evaluator)
         print("Test period:", str(X_test.index[0]), '->', str(X_test.index[-1]), "的年化超额收益为:", str(evaluator.excess_ann_ret))
 
