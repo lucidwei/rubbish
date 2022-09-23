@@ -7,11 +7,12 @@ from sklearn.metrics import r2_score, accuracy_score
 
 # 该类中bench指等权组合，其他benchmark model需要将model list作为变量传入
 class Evaluator:
-    def __init__(self, models, if_cls, X_test_long, y_test, X_train, y_train):
+    def __init__(self, models, if_cls, X_test_long, y_test, y_ret, X_train, y_train):
         self.models = models
         self.if_cls = if_cls
         self.X_test_long = X_test_long
         self.y_test = y_test
+        self.y_ret = y_ret
         # 训练集净值、position需要train data
         self.X_train = X_train
         self.y_train = y_train
@@ -59,25 +60,27 @@ class Evaluator:
                 print('第%d个资产的样本外 accuracy score:' % i, accuracy_score(real, pred_short))
                 pos_z.iloc[:, i] = [1 if i==2 else 0 for i in pred_short]
                 i += 1
-            # 等权配置
+            # 对筛选出来的进行等权配置
             pos = pd.DataFrame(index=pos_z.index, columns=pos_z.columns)
             for row_ind, row in pos_z.iterrows():
                 pos.loc[row_ind, :] = row / sum(row)
         return pos
 
     def get_port_ret(self):
-        ret_df = pd.DataFrame(index=self.y_test.index, columns=['return'])
-        for i in self.y_test.index:
-            ret_df.loc[i, 'return'] = np.average(self.y_test.loc[i, :], weights=self.port_pos.loc[i, :])
+        y_ret = self.y_ret if self.if_cls else self.y_test
+        ret_df = pd.DataFrame(index=y_ret.index, columns=['return'])
+        for i in y_ret.index:
+            ret_df.loc[i, 'return'] = np.average(y_ret.loc[i, :], weights=self.port_pos.loc[i, :])
         return ret_df
 
     # 等权组合
     def get_bench_ret(self):
-        weights = [1 / len(self.y_test.columns) for _ in self.y_test.columns]
+        y_ret = self.y_ret if self.if_cls else self.y_test
+        weights = [1 / len(y_ret.columns) for _ in y_ret.columns]
         # TODO: 利率债的return应该取相反数，简单起见忽略票息
-        ret_df = pd.DataFrame(index=self.y_test.index, columns=['return'])
-        for i in self.y_test.index:
-            ret_df.loc[i, 'return'] = np.average(self.y_test.loc[i, :], weights=weights)
+        ret_df = pd.DataFrame(index=y_ret.index, columns=['return'])
+        for i in y_ret.index:
+            ret_df.loc[i, 'return'] = np.average(y_ret.loc[i, :], weights=weights)
         # TODO: 检查这个和实际是否一致，怎么感觉数太小了
         return ret_df
 
