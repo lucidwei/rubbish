@@ -63,6 +63,8 @@ class Evaluator:
             # 对筛选出来的进行等权配置
             pos = pd.DataFrame(index=pos_z.index, columns=pos_z.columns)
             for row_ind, row in pos_z.iterrows():
+                if sum(row) == 0:
+                    continue
                 pos.loc[row_ind, :] = row / sum(row)
         return pos
 

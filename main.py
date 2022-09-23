@@ -25,6 +25,8 @@ X, y_ret = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, use_lag_x
 if if_cls:
     y_cls = utils.reg_to_class(y_ret, 3)
     y = y_cls
+else:
+    y = y_ret
 
 tscv = TimeSeriesSplit(n_splits=5)
 eval_list = []
