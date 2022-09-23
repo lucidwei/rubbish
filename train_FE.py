@@ -27,7 +27,7 @@ separate_y = True
 if_cls = True
 generations = None
 population_size = 100
-max_time_mins = 1
+max_time_mins = 100
 cachedir = utils.get_path('cachedir')
 
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     i = 0  # 可作为循环训练起点
     for yi_ind, yi in y.iloc[:, i:].iteritems():
         if if_cls:
-            X_selected, yi = pipe_FE.FE_ppl_cls.fit_transform(copy.deepcopy(X), yi)
+            X_selected = pipe_FE.FE_ppl_cls.fit_transform(copy.deepcopy(X), yi)
         pipe, X_test, y_test = utils.generate_1_pipe_auto(if_cls, X_selected, yi, generations, population_size,
                                                           max_time_mins, cachedir,
                                                           pipe_num=i)

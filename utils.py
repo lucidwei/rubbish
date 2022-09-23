@@ -197,7 +197,7 @@ def reg_to_class(y, tile_num):
     df = pd.DataFrame(index=y.index, columns=y.columns)
     if tile_num == 3:
         for col_ind, col in y.iteritems():
-            df.loc[:, col_ind] = pd.qcut(col, 3, labels=['低配', '持平', '超配'])
+            df.loc[:, col_ind] = pd.qcut(col, 3, labels=False) #, labels=['低配', '持平', '超配'])
     else:
         raise Exception('其他分类暂不支持')
     return df
