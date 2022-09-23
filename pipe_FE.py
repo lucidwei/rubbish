@@ -152,9 +152,9 @@ select_40n = FeatureUnion([
     ('mi0', SelectKBest(score_func=mutual_info_regression, k=num_select))
 ])
 select_40n_cls = FeatureUnion([
-    ('lr0', SelectFromModel(estimator=LogisticRegressionCV(), max_features=num_select)),
+    ('lr0', SelectFromModel(estimator=LogisticRegressionCV(max_iter=1000, random_state=1996), max_features=num_select)),
     ('ridge0', SelectFromModel(estimator=RidgeClassifierCV(), max_features=num_select)),
-    ('sgd0', SelectFromModel(estimator=SGDClassifier(), max_features=num_select)),
+    ('sgd0', SelectFromModel(estimator=SGDClassifier(random_state=1996), max_features=num_select)),
     ('rf0', SelectFromModel(estimator=RandomForestClassifier(random_state=1996), max_features=num_select)),
     ('gbr0', SelectFromModel(estimator=GradientBoostingClassifier(random_state=1996), max_features=num_select)),
     # MI太慢了，占整个时间的一半，而且选出来的好像比较奇怪
@@ -163,7 +163,7 @@ select_40n_cls = FeatureUnion([
 
 num_20 = 20
 select_20n = FeatureUnion([
-    ('lr1', SelectFromModel(estimator=LogisticRegressionCV(), max_features=num_20)),
+    ('lr1', SelectFromModel(estimator=LinearRegression(), max_features=num_20)),
     ('ridge1', SelectFromModel(estimator=RidgeCV(), max_features=num_20)),
     ('sgd1', SelectFromModel(estimator=SGDRegressor(), max_features=num_20)),
     ('rf1', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_20)),
@@ -171,9 +171,9 @@ select_20n = FeatureUnion([
     ('mi1', SelectKBest(score_func=mutual_info_regression, k=num_20))
 ])
 select_20n_cls = FeatureUnion([
-    ('lr1', SelectFromModel(estimator=LogisticRegressionCV(), max_features=num_20)),
+    ('lr1', SelectFromModel(estimator=LogisticRegressionCV(max_iter=1000, random_state=1996), max_features=num_20)),
     ('ridge1', SelectFromModel(estimator=RidgeClassifierCV(), max_features=num_20)),
-    ('sgd1', SelectFromModel(estimator=SGDClassifier(), max_features=num_20)),
+    ('sgd1', SelectFromModel(estimator=SGDClassifier(random_state=1996), max_features=num_20)),
     ('rf1', SelectFromModel(estimator=RandomForestClassifier(random_state=1996), max_features=num_20)),
     ('gbr1', SelectFromModel(estimator=GradientBoostingClassifier(random_state=1996), max_features=num_20)),
     ('mi1', SelectKBest(score_func=mutual_info_classif, k=num_20))
