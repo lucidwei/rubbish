@@ -39,7 +39,7 @@ class Evaluator:
             pos_z = pd.DataFrame(index=self.y_test.index, columns=self.y_test.columns)
             i = 0
             for col_ind, real in self.y_test.iteritems():
-                print('predicting test set for asset %d' % i)
+                print('\npredicting test set for asset %d' % i)
                 pred = self.models[i].predict(self.X_test_long)
                 pred_short = pred[-len(real):]
                 score = r2_score(real, pred_short)
@@ -57,7 +57,7 @@ class Evaluator:
             pos_z = pd.DataFrame(index=self.y_test.index, columns=self.y_test.columns)
             i = 0
             for col_ind, real in self.y_test.iteritems():
-                print('predicting test set for asset %d' % i)
+                print('\npredicting test set for asset %d' % i)
                 pred = self.models[i].predict(self.X_test_long)
                 pred_short = pred[-len(real):]
                 score = accuracy_score(real, pred_short)

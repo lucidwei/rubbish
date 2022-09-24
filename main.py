@@ -1,5 +1,6 @@
 # coding=gbk
 # git config --global https.proxy http://127.0.0.1:7890
+# git config --global --unset http.proxy
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import pickle, datetime
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
@@ -28,15 +29,15 @@ if if_cls:
 else:
     y = y_ret
 
-tscv = TimeSeriesSplit(n_splits=5)
+tscv = TimeSeriesSplit(n_splits=10)
 eval_list = []
 for train_index, test_index in tscv.split(X):
     if X.index[len(train_index)] < pd.Period('2014-1'):
         continue
     else:
-        X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
-        y_train, y_test = y.iloc[train_index, :], y.iloc[test_index, :]
-        y_test_ret = y_ret.loc[y_test.index, :]
+        X_train, X_test = X.copy(deep=True).iloc[train_index, :], X.copy(deep=True).iloc[test_index, :]
+        y_train, y_test = y.copy(deep=True).iloc[train_index, :], y.copy(deep=True).iloc[test_index, :]
+        y_test_ret = y_ret.copy(deep=True).loc[y_test.index, :]
         # 增加测试集长度使得FE得以进行
         X_test_long = utils.add_2years_test(X_train, X_test)
         print('------------------分割线--------------------')
@@ -50,5 +51,5 @@ for train_index, test_index in tscv.split(X):
         eval_list.append(evaluator)
         print("Test period:", str(X_test.index[0]), '->', str(X_test.index[-1]), "的年化超额收益为:",
               str(evaluator.excess_ann_ret))
-        print('------------------分割线--------------------')
+        print('------------------一一轮训练测试结束--------------------')
         # port_position, port_return, bench_return, port_worth, bench_worth, excess_ann_ret = evaluator.initializer()

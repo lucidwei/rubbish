@@ -55,13 +55,13 @@ import utils_eda
 class MacroFE(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.names_out = None
-        print('...initializing MacroFE\n')
+        print('...initializing MacroFE')
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X, y=None):
-        print('...transforming MacroFE\n')
+        print('...transforming MacroFE')
         X_df = pd.DataFrame(X)
         gen = pd.DataFrame(index=X_df.index)
         for col_ind, col in X_df.iteritems():
