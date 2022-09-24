@@ -77,6 +77,9 @@ class Evaluator:
         y_ret = self.y_ret if self.if_cls else self.y_test
         ret_df = pd.DataFrame(index=y_ret.index, columns=['return'])
         for i in y_ret.index:
+            if self.port_pos.loc[i, :].sum() == 0:
+                ret_df.loc[i, 'return'] = 0
+                continue
             ret_df.loc[i, 'return'] = np.average(y_ret.loc[i, :], weights=self.port_pos.loc[i, :])
         return ret_df
 
