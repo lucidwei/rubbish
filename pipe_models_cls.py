@@ -19,7 +19,7 @@ exported_pipeline1 = make_pipeline(
     StackingEstimator(estimator=LinearSVC(C=1.0, dual=True, loss="hinge", penalty="l2", tol=0.1)),
     MLPClassifier(alpha=0.001, learning_rate_init=0.01)
 )
-
+# 这个样本外表现好像是最好的
 exported_pipeline2 = make_pipeline(
     StandardScaler(),
     SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
@@ -54,7 +54,7 @@ exported_pipeline6 = make_pipeline(
     VarianceThreshold(threshold=0.1),
     GradientBoostingClassifier(learning_rate=0.1, max_depth=2, max_features=0.8500000000000001, min_samples_leaf=8, min_samples_split=19, n_estimators=100, subsample=0.8500000000000001)
 )
-
+# 这个样本外表现好像是最好的
 exported_pipeline7 = make_pipeline(
     StackingEstimator(estimator=ExtraTreesClassifier(bootstrap=True, criterion="gini", max_features=0.55, min_samples_leaf=2, min_samples_split=15, n_estimators=100)),
     SGDClassifier(alpha=0.01, eta0=0.1, fit_intercept=False, l1_ratio=1.0, learning_rate="invscaling", loss="log", penalty="elasticnet", power_t=0.5)
@@ -70,4 +70,14 @@ exported_pipeline9 = make_pipeline(
     StackingEstimator(estimator=DecisionTreeClassifier(criterion="entropy", max_depth=3, min_samples_leaf=3, min_samples_split=12)),
     StackingEstimator(estimator=DecisionTreeClassifier(criterion="gini", max_depth=7, min_samples_leaf=14, min_samples_split=18)),
     MLPClassifier(alpha=0.0001, learning_rate_init=0.1)
+)
+
+# exported_pipelineX = make_pipeline(
+#     StackingEstimator(estimator=ExtraTreesClassifier(bootstrap=True, criterion="gini", max_features=0.55, min_samples_leaf=2, min_samples_split=15, n_estimators=100)),
+#     SGDClassifier(alpha=0.01, eta0=0.1, fit_intercept=False, l1_ratio=1.0, learning_rate="invscaling", loss="log", penalty="elasticnet", power_t=0.5)
+# )
+
+exported_pipelineX = make_pipeline(
+    StandardScaler(),
+    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
 )

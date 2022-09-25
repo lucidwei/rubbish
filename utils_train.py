@@ -218,7 +218,7 @@ tpot_config = {
 
 
 #### 利用得到的pipelines训练得到可执行模型
-def get_models_dump(X_train, y_train, version, force_train):
+def get_models_dump(X_train, y_train, version, force_train, same_model):
     import pipe_FE
     import copy
 
@@ -248,17 +248,28 @@ def get_models_dump(X_train, y_train, version, force_train):
         yi = y_train.iloc[:, i].copy(deep=True)
         if not os.path.exists(file_path) or force_train:
             if version != 'cls':
-                whole_ppl = make_pipeline(
-                    pipe_FE.FE_ppl,
-                    eval(prefix + 'exported_pipeline%d' % i)
-                )
-                whole_ppl.fit(X_train.copy(deep=True), yi)
+                if not same_model:
+                    whole_ppl = make_pipeline(
+                        pipe_FE.FE_ppl,
+                        eval(prefix + 'exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        pipe_FE.FE_ppl,
+                        eval(prefix + 'exported_pipelineX')
+                    )
             else:
-                whole_ppl = make_pipeline(
-                    pipe_FE.FE_ppl_cls,
-                    eval(prefix + 'exported_pipeline%d' % i)
-                )
-                whole_ppl.fit(X_train.copy(deep=True), yi)
+                if not same_model:
+                    whole_ppl = make_pipeline(
+                        pipe_FE.FE_ppl_cls,
+                        eval(prefix + 'exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        pipe_FE.FE_ppl_cls,
+                        eval(prefix + 'exported_pipelineX')
+                    )
+            whole_ppl.fit(X_train.copy(deep=True), yi)
 
             # 写入缓存
             with open(file_path, 'wb') as f:
