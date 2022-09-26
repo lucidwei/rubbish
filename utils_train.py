@@ -218,7 +218,7 @@ tpot_config = {
 
 
 #### 利用得到的pipelines训练得到可执行模型
-def get_models_dump(X_train, y_train, version, force_train, same_model):
+def get_models_dump(X_train, y_train, pipe, version, force_train, same_model):
     import pipe_FE
     import copy
 
@@ -229,17 +229,17 @@ def get_models_dump(X_train, y_train, version, force_train, same_model):
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
 
-    if version == 'benchmark':
+    if pipe == 'benchmark':
         import pipe_models_base
         prefix = 'pipe_models_base.'
-    elif version == 'post_FE':
+    elif pipe == 'post_FE':
         import pipe_models_FE
         prefix = 'pipe_models_FE.'
-    elif version == 'cls':
+    elif pipe == 'cls':
         import pipe_models_cls
         prefix = 'pipe_models_cls.'
     else:
-        raise Exception('Specify right version to get dump')
+        raise Exception('Specify right pipeline to get dump')
 
     models_num = len(y_train.columns)
     models = []
@@ -247,26 +247,35 @@ def get_models_dump(X_train, y_train, version, force_train, same_model):
         file_path = models_dir + r'/modeldump_asset' + str(i)
         yi = y_train.iloc[:, i].copy(deep=True)
         if not os.path.exists(file_path) or force_train:
-            if version != 'cls':
+            if pipe == 'cls':
                 if not same_model:
                     whole_ppl = make_pipeline(
-                        pipe_FE.FE_ppl,
+                        pipe_FE.FE_ppl_cls,
                         eval(prefix + 'exported_pipeline%d' % i)
                     )
                 else:
                     whole_ppl = make_pipeline(
-                        pipe_FE.FE_ppl,
+                        pipe_FE.FE_ppl_cls,
                         eval(prefix + 'exported_pipelineX')
                     )
-            else:
+            elif pipe == 'benchmark':
                 if not same_model:
                     whole_ppl = make_pipeline(
-                        pipe_FE.FE_ppl_cls,
                         eval(prefix + 'exported_pipeline%d' % i)
                     )
                 else:
                     whole_ppl = make_pipeline(
-                        pipe_FE.FE_ppl_cls,
+                        eval(prefix + 'exported_pipelineX')
+                    )
+            elif pipe == 'post_FE':
+                if not same_model:
+                    whole_ppl = make_pipeline(
+                        pipe_FE.FE_ppl,
+                        eval(prefix + 'exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        pipe_FE.FE_ppl,
                         eval(prefix + 'exported_pipelineX')
                     )
             whole_ppl.fit(X_train.copy(deep=True), yi)

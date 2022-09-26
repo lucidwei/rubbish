@@ -62,6 +62,7 @@ class MacroFE(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         print('...transforming MacroFE')
+        #TODO: X是ndarray没有列标，从Mixin读取一下
         X_df = pd.DataFrame(X)
         gen = pd.DataFrame(index=X_df.index)
         for col_ind, col in X_df.iteritems():

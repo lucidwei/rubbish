@@ -2,7 +2,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import make_pipeline, make_union
 from tpot.builtins import StackingEstimator, OneHotEncoder
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
-from sklearn.ensemble import GradientBoostingClassifier, ExtraTreesClassifier
+from sklearn.ensemble import GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import SGDClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -19,7 +19,7 @@ exported_pipeline1 = make_pipeline(
     StackingEstimator(estimator=LinearSVC(C=1.0, dual=True, loss="hinge", penalty="l2", tol=0.1)),
     MLPClassifier(alpha=0.001, learning_rate_init=0.01)
 )
-# 这个样本外表现好像是最好的
+# 这个可以留着
 exported_pipeline2 = make_pipeline(
     StandardScaler(),
     SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
@@ -77,7 +77,30 @@ exported_pipeline9 = make_pipeline(
 #     SGDClassifier(alpha=0.01, eta0=0.1, fit_intercept=False, l1_ratio=1.0, learning_rate="invscaling", loss="log", penalty="elasticnet", power_t=0.5)
 # )
 
+# 适合pipe9 -0.52
+# exported_pipelineX = make_pipeline(
+#     StandardScaler(),
+#     SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
+# )
+# 适合pipe179- 0.44，42，60
+# exported_pipelineX = make_pipeline(
+#     LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
+# )
+# 适合1679 - 0.47, 43, 46, 69
+# exported_pipelineX = make_pipeline(
+#     RandomForestClassifier(n_estimators=200, max_depth=3, bootstrap=False, random_state=1996)
+# )
+
+# 适合167 - 0.48 48 51
 exported_pipelineX = make_pipeline(
-    StandardScaler(),
-    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
+    StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=4, max_features=0.4,
+                                                           min_samples_leaf=7, min_samples_split=16, n_estimators=100, subsample=0.9000000000000001)),
+    StackingEstimator(estimator=RandomForestClassifier(criterion="entropy", max_depth=3, min_samples_leaf=3, min_samples_split=12)),
+    StackingEstimator(estimator=MLPClassifier(alpha=0.0001, learning_rate_init=0.1)),
+    StackingEstimator(estimator=SGDClassifier(alpha=0.0, eta0=1.0, fit_intercept=False, l1_ratio=0.5, learning_rate="invscaling",
+                                              loss="hinge", penalty="elasticnet", power_t=1.0)),
+    StackingEstimator(
+        estimator=XGBClassifier(learning_rate=0.1, max_depth=6, min_child_weight=4, n_estimators=100, n_jobs=1,
+                                subsample=0.6000000000000001, verbosity=0)),
+    LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
 )
