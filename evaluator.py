@@ -63,12 +63,13 @@ class Evaluator:
                 score = accuracy_score(real, pred_short)
                 print('第%d个资产的样本外 accuracy score:' % i, score)
                 self.scores['第%d个资产:' % i] = score
-                pos_z.iloc[:, i] = [1 if i==2 else 0 for i in pred_short]
+                pos_z.iloc[:, i] = [1 if j==2 else 0 for j in pred_short]
                 i += 1
             # 对筛选出来的进行等权配置
             pos = pd.DataFrame(index=pos_z.index, columns=pos_z.columns)
             for row_ind, row in pos_z.iterrows():
                 if sum(row) == 0:
+                    pos.loc[row_ind, :] = np.zeros_like(row)
                     continue
                 pos.loc[row_ind, :] = row / sum(row)
         return pos
