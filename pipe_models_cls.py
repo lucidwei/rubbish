@@ -78,20 +78,21 @@ exported_pipeline9 = make_pipeline(
 # )
 
 # 适合pipe9 -0.52
-# exported_pipelineX = make_pipeline(
-#     StandardScaler(),
-#     SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
-# )
+exported_pipeline_sgd = make_pipeline(
+    StandardScaler(),
+    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
+)
 # 适合pipe179- 0.44，42，60
-# exported_pipelineX = make_pipeline(
-#     LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
-# )
+exported_pipeline_svc = make_pipeline(
+    LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
+)
 # 适合1679 - 0.47, 43, 46, 69
-# exported_pipelineX = make_pipeline(
-#     RandomForestClassifier(n_estimators=200, max_depth=3, bootstrap=False, random_state=1996)
-# )
+exported_pipeline_rf = make_pipeline(
+    RandomForestClassifier(n_estimators=200, max_depth=3, bootstrap=False, random_state=1996)
+)
 
 # 适合167 - 0.48 48 51
+# 026 - 0.42 46 42
 exported_pipelineX = make_pipeline(
     StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=4, max_features=0.4,
                                                            min_samples_leaf=7, min_samples_split=16, n_estimators=100, subsample=0.9000000000000001)),
