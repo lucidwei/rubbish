@@ -202,7 +202,7 @@ def reg_to_class(y, tile_num):
 
 def add_2years_test(X_train, X_test):
     # 先默认月度数据
-    X_test = pd.concat([X_train.iloc[-26:, :], X_test])
+    X_test = pd.concat([X_train.iloc[-32:, :], X_test]) # MACD需要32个前摇
     # y_test = pd.concat([y_train.iloc[-24:, :], y_test])
     return X_test
 

@@ -54,7 +54,6 @@ import utils_eda
 # 模仿preproc里生成新数据，调talib。肯定会产生空值，去空值好像series_to_supervised可以做。
 class MacroFE(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.names_out = None
         print('...initializing MacroFE')
 
     def fit(self, X, y=None):
@@ -62,17 +61,22 @@ class MacroFE(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         print('...transforming MacroFE')
-        #TODO: X是ndarray没有列标，从Mixin读取一下
+        # feature names从transform里传不进来
         X_df = pd.DataFrame(X)
         gen = pd.DataFrame(index=X_df.index)
         for col_ind, col in X_df.iteritems():
             gen_i = single_generator(col_ind, col, type='macro')
             gen = pd.concat([gen, gen_i], axis=1)
-        self.names_out = gen.columns
-        return gen
+        # self.names_out = gen.columns
+        return np.array(gen)
 
     def get_feature_names_out(self, input_features=None):
-        return self.names_out
+        names_out = []
+        for i in input_features:
+            gen = [i+'_macd', i+'_macdsignal', i+'_macdhist', i+'_mom10',
+                   i+'_PPO', i+'_yoy', i+'_mom', i+'_rsi14', i+'_rsi6', i+'_ema12']
+            names_out.extend(gen)
+        return np.array(names_out)
 
 
 # TODO: 可以把high low等加进来，可以生成更多特征
