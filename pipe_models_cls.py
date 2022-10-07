@@ -87,13 +87,15 @@ exported_pipeline_svc = make_pipeline(
     LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
 )
 # 适合1679 - 0.47, 43, 46, 69
+# model appendging bugx修改后：
+# 适合2 - 0.43
 exported_pipeline_rf = make_pipeline(
-    RandomForestClassifier(n_estimators=200, max_depth=3, bootstrap=False, random_state=1996)
+    RandomForestClassifier(n_estimators=300, max_depth=3, bootstrap=False, random_state=1996)
 )
 
 # 适合167 - 0.48 48 51
 # 026 - 0.42 46 42
-exported_pipelineX = make_pipeline(
+exported_pipeline_stksvc = make_pipeline(
     StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=4, max_features=0.4,
                                                            min_samples_leaf=7, min_samples_split=16, n_estimators=100, subsample=0.9000000000000001)),
     StackingEstimator(estimator=RandomForestClassifier(criterion="entropy", max_depth=3, min_samples_leaf=3, min_samples_split=12)),
