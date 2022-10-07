@@ -14,7 +14,7 @@ from evaluator import Evaluator
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 if_update = False  ## 原始数据文件是否已经更新
 use_cache = True  ## 预处理逻辑/参数变更 or 缓存的pickle需要更新时，设为False (注意利用的数据格式，避免用本月行情预测本月行情。)
-version = 'cls_1005'
+version = 'delcorr_1007'
 
 # 预处理参数
 if_cls = True
@@ -50,7 +50,7 @@ for train_index, test_index in tscv.split(X.copy(deep=True)):
         continue
     else:
         X_train, y_train = X.copy(deep=True).iloc[train_index, :], y.copy(deep=True).iloc[train_index, :]
-        print("/nTRAIN period:", str(X_train.index[0]), '->', str(X_train.index[-1]),
+        print("\nTRAIN period:", str(X_train.index[0]), '->', str(X_train.index[-1]),
               "\nStart training.......................")
 
         models = utils_train.get_models_dump(X_train, y_train, pipe=pipe, version=version, force_train=force_train,
@@ -85,7 +85,7 @@ port_poss = [i.port_pos for i in evalor_list]
 
 
 
-
+# 训练测试没拆开时
 # tscv = TimeSeriesSplit(n_splits=10)
 # eval_list = []
 # for train_index, test_index in tscv.split(X):

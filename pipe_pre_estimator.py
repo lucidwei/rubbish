@@ -120,27 +120,55 @@ def get_ori_columns(X):
 #     ('assetFE', AssetFE(), get_asset_columns()),
 # ])
 
+class FindCorrelation(BaseEstimator, TransformerMixin):
+    """
+    Remove pairwise correlations beyond threshold.
+    This is not 'exact': it does not recalculate correlation
+    after each step, and is therefore less expensive.
+    This works similarly to the R caret::findCorrelation function
+    with exact = False
+    """
+    def __init__(self, threshold=0.9):
+        self.threshold = threshold
 
-# 自定义一下把列名放回去，不过没有用，原生框架还是会丢
-class CustomPCA(PCA):
-    def fit_transform(self, X, y=None):
-        U = super().fit_transform(X)
-        df = pd.DataFrame(U, index=X.index, columns=['PC1', 'PC2'])
-        return df
+    def fit(self, X, y=None):
+        """
+        Produce binary array for filtering columns in feature array.
+        Remember to transpose the correlation matrix so is
+        column major.
+        Loop through columns in (n_features,n_features) correlation matrix.
+        Determine rows where value is greater than threshold.
+        For the candidate pairs, one must be removed. Determine which feature
+        has the larger average correlation with all other features and remove it.
+        Remember, matrix is symmetric so shift down by one row per column as
+        iterate through.
+        """
+        self.correlated = np.zeros(X.shape[1], dtype=bool)
+        self.corr_mat = np.corrcoef(X.T)
+        abs_corr_mat = np.abs(self.corr_mat)
 
+        for i, col in enumerate(abs_corr_mat.T):
+            corr_rows = np.where(col[i+1:] > self.threshold)[0]
+            avg_corr = np.mean(col)
 
-class CustomTruncatedSVD(TruncatedSVD):
-    def fit_transform(self, X, y=None):
-        U = super().fit_transform(X)
-        df = pd.DataFrame(U, index=X.index, columns=['SVD1', 'SVD2'])
-        return df
+            if len(corr_rows) > 0:
+                for j in corr_rows:
+                    if np.mean(abs_corr_mat.T[:, j]) > avg_corr:
+                        self.correlated[j] = True
+                    else:
+                        self.correlated[i] = True
 
+        return self
 
-class CustomLinearRegression(LinearRegression):
-    def fit(self, X, y, sample_weight=None):
-        if isinstance(X, tuple):
-            X, y = X
-        return super().fit(X, y)
+    def transform(self, X, y=None):
+        """
+        Mask the array with the features flagged for removal
+        """
+        return X.T[~self.correlated].T
+
+    def get_feature_names_out(self, input_features=None):
+        return input_features[~self.correlated]
+
 
 from sklearn.feature_selection import f_classif, mutual_info_classif
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
@@ -148,7 +176,7 @@ from sklearn.linear_model import LogisticRegressionCV, RidgeClassifierCV, SGDCla
 
 num_select = 40
 select_40n = FeatureUnion([
-    ('lr0', SelectFromModel(estimator=CustomLinearRegression(), max_features=num_select)),
+    ('lr0', SelectFromModel(estimator=LinearRegression(), max_features=num_select)),
     ('ridge0', SelectFromModel(estimator=RidgeCV(), max_features=num_select)),
     ('sgd0', SelectFromModel(estimator=SGDRegressor(), max_features=num_select)),
     ('rf0', SelectFromModel(estimator=RandomForestRegressor(random_state=1996), max_features=num_select)),
@@ -236,6 +264,7 @@ FE_ppl = Pipeline([
     ('feature_gen', union),
     ('fillna1', KNNImputer()),
     ('scaler1', StandardScaler()),
+    ('delcorr', FindCorrelation(0.95)),
     ('select_20n', select_20n),
 ])
 
@@ -247,5 +276,6 @@ FE_ppl_cls = Pipeline([
     ('feature_gen', union),
     ('fillna1', KNNImputer()),
     ('scaler1', StandardScaler()),
+    ('delcorr', FindCorrelation(0.95)),
     ('select_20n', select_20n_cls),
 ])

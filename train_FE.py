@@ -7,7 +7,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.preprocessing import StandardScaler
 import talib
-import utils, pipe_preproc, pipe_FE
+import utils, pipe_preproc, pipe_pre_estimator
 
 
 # Configuration
