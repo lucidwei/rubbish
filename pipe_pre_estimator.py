@@ -260,22 +260,24 @@ FE_ppl = Pipeline([
     ('fillna0', KNNImputer()),
     ('scaler0', StandardScaler()),
     ('select_40n', select_40n),
+    ('delcorr0', FindCorrelation(0.95)),
     # 通过增加测试集，使得测试集能用到训练集的部分近期数据来生成feature
     ('feature_gen', union),
     ('fillna1', KNNImputer()),
     ('scaler1', StandardScaler()),
-    ('delcorr', FindCorrelation(0.95)),
     ('select_20n', select_20n),
+    ('delcorr1', FindCorrelation(0.95)),
 ])
-
 FE_ppl_cls = Pipeline([
     ('fillna0', KNNImputer()),
     ('scaler0', StandardScaler()),
     ('select_40n', select_40n_cls),
+    ('delcorr0', FindCorrelation(0.95)),
     # 通过增加测试集，使得测试集能用到训练集的部分近期数据来生成feature
     ('feature_gen', union),
     ('fillna1', KNNImputer()),
     ('scaler1', StandardScaler()),
-    ('delcorr', FindCorrelation(0.95)),
     ('select_20n', select_20n_cls),
+    ('delcorr1', FindCorrelation(0.95))
 ])
+
