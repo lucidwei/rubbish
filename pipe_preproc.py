@@ -264,7 +264,6 @@ class SeriesToSupervised(BaseEstimator):
         # 如果需要增加时移feature可调大n_in，同理n_out。
         dfs, col_names = list(), list()
         # input sequence (t-n, ... t-1)
-        # TODO:这里打个补丁，但是列名还是丢失了
         x_df = pd.DataFrame(X).copy(deep=True)
         for i in range(self.n_in, 0, -1):
             dfs.append(x_df.shift(i))
@@ -283,14 +282,16 @@ class SeriesToSupervised(BaseEstimator):
                 col_names += [('var%d(t+%d)' % (j + 1, i) + y_df.columns.values[j]) for j in range(y_df.shape[1])]
         y = pd.concat(dfs, axis=1)
         y.columns = col_names
-        # 补丁
-        y.index = X.index
 
+        # 针对滑窗产生的空值进行去除
+        # selectFromModel中y不能有空
+        # TODO: 草率处理，严谨应该在data_alignment中完善逻辑
         if self.dropnan:
-            # X y合并再拆开
-            combined = pd.concat([X, y], join="inner", axis=1)
-            # drop rows with NaN values
-            combined.dropna(inplace=True)
+            # X滑窗较长，早期空值较多。y只缺失前期数据
+            X.dropna(inplace=True)
+            y_filled = y.fillna(method='bfill')
+            # X y取时间交集再拆开
+            combined = pd.concat([X, y_filled], join="inner", axis=1)
             X = combined.iloc[:, :-y_df.shape[1]]
             y = combined.iloc[:, -y_df.shape[1]:]
 

@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.impute import KNNImputer
+from sklearn.preprocessing import OneHotEncoder
 import pipe_preproc
 import utils_eda
 
@@ -22,7 +23,8 @@ def get_path(file_name: str):
         'to_week_table': r'.\data\to_week_table.xlsx',
         'info_table': r'.\data\info_table.csv',
         'prepipe_data': r'data_dump\prepipe_data',
-        'cachedir': 'C:\\Downloads\\tpot_cache'
+        'cachedir': 'C:\\Downloads\\tpot_cache',
+        'supplements': r'.\data\supplements.xlsx'
     }
 
     mac_dic = {
@@ -32,7 +34,8 @@ def get_path(file_name: str):
         'to_week_table': './data/to_week_table.xlsx',
         'info_table': './data/info_table.csv',
         'prepipe_data': './data_dump/prepipe_data',
-        'cachedir': abspath('../../Documents/tpot_cache')
+        'cachedir': abspath('../../Documents/tpot_cache'),
+        'supplements': './data/supplements.xlsx'
     }
 
     return windows_dic[file_name] if platform.system().lower() == 'windows' else mac_dic[file_name]
@@ -137,7 +140,13 @@ class GetStructuralData:
         return {'x': sdata_x, 'y': sdata_y}
 
 
-def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, begT, endT):
+def get_supplements():
+    supplement_path = get_path('supplements')
+    sup = pd.read_excel(supplement_path, header=0, index_col=0)
+    sup.index = pd.PeriodIndex(sup.index, freq='M')
+    return sup['状态'].copy(deep=True)
+
+def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_x_lags, use_sup, begT, endT):
     cache_path = get_path('prepipe_data')
     if align_to == 'month':
         info_path = get_path('to_month_table')
@@ -158,28 +167,23 @@ def get_preproc_data(ori_data_path, if_update, use_cache, use_x_lags, align_to, 
             ('special_treatment', pipe_preproc.SpecialTreatment(info)),
             ('data_alignment', pipe_preproc.DataAlignment(align_to, info)),
         ])
-        # pipe_preprocess1 = Pipeline(steps=[
-        #     # 处理稳态不能用bfill过的X
-        #     ('station_origin', pipe_preproc.GetStationary()),
-        #     # 丢失坐标
-        #     ('imputer', KNNImputer()),
-        #     ('ts_to_supervised', pipe_preproc.SeriesToSupervised(n_in=use_x_lags))
-        # ])
 
         X0, y0 = pipe_preprocess0.fit_transform(raw_x, raw_y)
         X1 = pipe_preproc.GetStationary().transform(X0)
         X2 = KNNImputer().fit_transform(X1)
         X3 = pd.DataFrame(X2, index=X1.index, columns=X1.columns)
-        X, y = pipe_preproc.SeriesToSupervised(n_in=use_x_lags).transform(X3, y0)
+        if use_sup:
+            sup = get_supplements()
+            encoded = OneHotEncoder(sparse=False).fit_transform(sup.to_frame('sup_df'))
+            enc_df = pd.DataFrame(encoded, index=sup.index, columns=['cn复苏', 'cn滞涨', 'cn衰退', 'cn过热'])
+            X3 = pd.concat([X3, enc_df], join='inner', axis=1)
 
-        # selectFromModel中y不能有空
-        # TODO: 草率处理，严谨应该在data_alignment中完善逻辑
-        y_filled = y.fillna(method='ffill').fillna(method='bfill')
+        X, y = pipe_preproc.SeriesToSupervised(n_in=use_x_lags).transform(X3, y0)
         print('...Pre-processing finished\n')
 
         # 缓存数据
         with open(cache_path, 'wb') as f:
-            pickle.dump((X, y_filled), f)
+            pickle.dump((X, y), f)
         print('data pickle saved')
     else:
         # 读取缓存数据

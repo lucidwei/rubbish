@@ -19,7 +19,8 @@ version = 'delcorr_1007'
 # 预处理参数
 if_cls = True
 align_to = 'month'
-use_lag_x = 15
+use_lag_x = 14
+use_sup = True  ## 纳入美林时钟等补充框架
 begT = '2004-01'
 endT = datetime.date.today()
 asset_sel = [0, 2, 5, 7]
@@ -31,7 +32,7 @@ force_train = False  ## 因为每个时间段筛选出的特征不一样，所以必须重新get dump，
 model_name = 'rf'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
 
 #############预处理##############
-X, y_ret = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, use_lag_x, align_to, begT, endT)
+X, y_ret = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, use_lag_x, use_sup, begT, endT)
 if asset_sel:
     y_ret = y_ret.iloc[:, asset_sel]
 
@@ -70,6 +71,8 @@ for train_index, test_index in tscv.split(X.copy(deep=True)):
               "\nStart testing...........................")
         # 增加测试集长度使得FE得以进行
         X_test_long = utils.add_2years_test(X_train, X_test)
+        # debug feature names
+        # names = models_list[str(X_train.index[-1])][0][:-1].get_feature_names_out()
 
         evalor = Evaluator(models_list[str(X_train.index[-1])], if_cls, X_test_long, y_test, y_test_ret, X_train,
                            y_train)
