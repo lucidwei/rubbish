@@ -279,6 +279,7 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
                         eval(prefix + 'exported_pipeline_' + model_name)
                     )
             whole_ppl.fit(X_train.copy(deep=True), yi)
+            print('样本内score：', whole_ppl.score(X_train, yi))
 
             # 写入缓存
             with open(file_path, 'wb') as f:

@@ -14,19 +14,19 @@ from evaluator import Evaluator
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 if_update = False  ## 原始数据文件是否已经更新
 use_cache = True  ## 预处理逻辑/参数变更 or 缓存的pickle需要更新时，设为False (注意利用的数据格式，避免用本月行情预测本月行情。)
-version = 'delcorr_1007'
+version = 'clock_rf_debug'
 
 # 预处理参数
 if_cls = True
 align_to = 'month'
-use_lag_x = 14
+use_lag_x = 15
 use_sup = True  ## 纳入美林时钟等补充框架
 begT = '2004-01'
 endT = datetime.date.today()
-asset_sel = [0, 2, 5, 7]
+asset_sel = []
 
 # 训练参数
-n_splits = 5  ## 滚动训练次数
+n_splits = 10  ## 滚动训练次数
 pipe = 'cls'  ## 'benchmark', 'post_FE'(reg), 'cls'
 force_train = False  ## 因为每个时间段筛选出的特征不一样，所以必须重新get dump，为了节省时间调试可以False
 model_name = 'rf'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
@@ -71,8 +71,6 @@ for train_index, test_index in tscv.split(X.copy(deep=True)):
               "\nStart testing...........................")
         # 增加测试集长度使得FE得以进行
         X_test_long = utils.add_2years_test(X_train, X_test)
-        # debug feature names
-        # names = models_list[str(X_train.index[-1])][0][:-1].get_feature_names_out()
 
         evalor = Evaluator(models_list[str(X_train.index[-1])], if_cls, X_test_long, y_test, y_test_ret, X_train,
                            y_train)

@@ -256,8 +256,8 @@ union = FeatureUnion([
     ('talibFE', MacroFE()),
 ])
 
-FE_ppl = Pipeline([
-    ('fillna0', KNNImputer()),
+ppl_reg = Pipeline([
+    # ('fillna0', KNNImputer()),
     ('scaler0', StandardScaler()),
     ('select_40n', select_40n),
     ('delcorr0', FindCorrelation(0.95)),
@@ -268,8 +268,9 @@ FE_ppl = Pipeline([
     ('select_20n', select_20n),
     ('delcorr1', FindCorrelation(0.95)),
 ])
-FE_ppl_cls = Pipeline([
-    ('fillna0', KNNImputer()),
+
+ppl_cls = Pipeline([
+    # ('fillna0', KNNImputer()),
     ('scaler0', StandardScaler()),
     ('select_40n', select_40n_cls),
     ('delcorr0', FindCorrelation(0.95)),
@@ -281,3 +282,19 @@ FE_ppl_cls = Pipeline([
     ('delcorr1', FindCorrelation(0.95))
 ])
 
+def if_bin_col(X):
+    mask = []
+    for col in range(X.shape[1]):
+        a = X.iloc[:, col].to_numpy()
+        mask.append(((a==0) | (a==1)).all())
+    return np.array(mask)
+
+
+def if_numer_col(X):
+    return ~if_bin_col(X)
+
+# 保证supplements数据喂入estimator
+FE_ppl_cls = ColumnTransformer([
+    ('pipe_cls', ppl_cls, if_numer_col),
+    # ('cat', FunctionTransformer(copy.copy), if_numer_col)
+], remainder='passthrough')

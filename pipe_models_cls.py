@@ -79,8 +79,7 @@ exported_pipeline9 = make_pipeline(
 
 # 适合pipe9 -0.52
 exported_pipeline_sgd = make_pipeline(
-    StandardScaler(),
-    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0)
+    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, shuffle=False, learning_rate="adaptive", loss="modified_huber", penalty="elasticnet", power_t=1.0, average=10)
 )
 # 适合pipe179- 0.44，42，60
 exported_pipeline_svc = make_pipeline(
