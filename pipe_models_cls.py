@@ -78,18 +78,85 @@ exported_pipeline9 = make_pipeline(
 # )
 
 # 适合pipe9 -0.52
-exported_pipeline_sgd = make_pipeline(
-    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, shuffle=False, learning_rate="adaptive", loss="modified_huber", penalty="elasticnet", power_t=1.0, average=10)
+# exported_pipeline_sgd = make_pipeline(
+#     SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, shuffle=False, learning_rate="adaptive", loss="modified_huber", penalty="elasticnet", power_t=1.0, average=10)
+# )
+# 再pretrain from log9
+exported_pipeline_sgd9 = make_pipeline(
+    SGDClassifier(alpha=0.0, eta0=0.1, fit_intercept=False, l1_ratio=0.75, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0, average=10)
 )
+# 再pretrain from log3
+exported_pipeline_sgd3 = make_pipeline(
+    SGDClassifier(alpha=0.0, eta0=0.1, fit_intercept=True, l1_ratio=0.75, learning_rate="constant", loss="modified_huber", penalty="elasticnet", power_t=10, average=10)
+)
+# 再pretrain from log6
+exported_pipeline_sgd6 = make_pipeline(
+    SGDClassifier(alpha=0.01, eta0=0.01, fit_intercept=False, l1_ratio=0.75, learning_rate="invscaling", loss="modified_huber", penalty="elasticnet", power_t=0.5, average=10)
+)
+# 再pretrain from log2
+exported_pipeline_sgd2 = make_pipeline(
+    SGDClassifier(alpha=0.01, eta0=0.01, fit_intercept=True, l1_ratio=1, learning_rate="constant", loss="log", penalty="elasticnet", power_t=0.1, average=10)
+)
+# 再pretrain from log5
+exported_pipeline_sgd5 = make_pipeline(
+    SGDClassifier(alpha=0.001, eta0=1, fit_intercept=False, l1_ratio=1, learning_rate="constant", loss="perceptron", penalty="elasticnet", power_t=1, average=10)
+)
+# 再pretrain from log4
+exported_pipeline_sgd4 = make_pipeline(
+    SGDClassifier(alpha=0.001, eta0=0.1, fit_intercept=False, l1_ratio=1, learning_rate="constant", loss="modified_huber", penalty="elasticnet", power_t=0.5, average=10)
+)
+# 再pretrain from log1
+exported_pipeline_sgd1 = make_pipeline(
+    SGDClassifier(alpha=0.01, eta0=0.1, fit_intercept=True, l1_ratio=1, learning_rate="invscaling", loss="log", penalty="elasticnet", power_t=1, average=10)
+)
+
 # 适合pipe179- 0.44，42，60
-exported_pipeline_svc = make_pipeline(
-    LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
+# exported_pipeline_svc = make_pipeline(
+#     LinearSVC(C=0.0001, dual=False, loss="squared_hinge", penalty="l2", tol=0.001)
+# )
+# 再pretrain from log8
+exported_pipeline_svc8 = make_pipeline(
+    LinearSVC(C=0.0001, dual=True, loss="hinge", penalty="l2", tol=0.00001)
 )
+# 再pretrain from log3
+exported_pipeline_svc3 = make_pipeline(
+    LinearSVC(C=0.001, dual=True, loss="squared_hinge", penalty="l2", tol=0.001)
+)
+
+# 再pretrain from log8
+exported_pipeline_gb8 = make_pipeline(
+    GradientBoostingClassifier(learning_rate=0.5, max_depth=4, max_features=0.05, min_samples_leaf=16, min_samples_split=4, n_estimators=100, subsample=0.6)
+)
+# 再pretrain from log6
+exported_pipeline_gb6 = make_pipeline(
+    GradientBoostingClassifier(learning_rate=0.1, max_depth=3, max_features=0.75, min_samples_leaf=2, min_samples_split=3, n_estimators=100, subsample=0.55)
+)
+# 再pretrain from log1
+exported_pipeline_gb1 = make_pipeline(
+    GradientBoostingClassifier(learning_rate=0.1, max_depth=2, max_features=0.05, min_samples_leaf=5, min_samples_split=11, n_estimators=100, subsample=0.9)
+)
+
+exported_pipeline_gb = make_pipeline(
+    GradientBoostingClassifier(learning_rate=0.1, max_depth=3, max_features=0.75, min_samples_leaf=0.3, min_samples_split=0.6, n_estimators=200, subsample=0.9)
+)
+
+exported_pipeline_gbori = make_pipeline(
+    GradientBoostingClassifier()
+)
+
 # 适合1679 - 0.47, 43, 46, 69
 # model appendging bugx修改后：
 # 适合2 - 0.43
 exported_pipeline_rf = make_pipeline(
     RandomForestClassifier(n_estimators=300, max_depth=3, bootstrap=False, random_state=1996)
+)
+# 再pretrain from log7&5
+exported_pipeline_mlp7 = make_pipeline(
+    MLPClassifier(alpha=0.1, learning_rate_init=0.001)
+)
+# 再pretrain from log0
+exported_pipeline_mlp0 = make_pipeline(
+    MLPClassifier(alpha=0.01, learning_rate_init=0.5)
 )
 
 # 适合167 - 0.48 48 51

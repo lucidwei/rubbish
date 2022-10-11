@@ -1,6 +1,6 @@
 # coding=gbk
 
-from sklearn.model_selection import train_test_split, TimeSeriesSplit
+from sklearn.model_selection import train_test_split, TimeSeriesSplit, GridSearchCV
 from sklearn.pipeline import Pipeline, make_pipeline
 from tpot import TPOTRegressor, TPOTClassifier
 import numpy as np
@@ -292,3 +292,82 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
             print('model %d pickle loaded' % i)
 
     return models
+
+
+def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
+    import pipe_pre_estimator
+    import copy
+
+    dir = r'models_dump/'
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    models_dir = dir + r'gscv/'
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+
+    if pipe == 'benchmark':
+        import pipe_models_base
+        prefix = 'pipe_models_base.'
+    elif pipe == 'reg_FE':
+        import pipe_models_FE
+        prefix = 'pipe_models_FE.'
+    elif pipe == 'cls':
+        import pipe_models_cls
+        prefix = 'pipe_models_cls.'
+    else:
+        raise Exception('Specify right pipeline to get dump')
+
+    models_num = len(y_train.columns)
+    results_list = []
+    for i in range(0, models_num):
+        yi = y_train.iloc[:, i].copy(deep=True)
+        if pipe == 'cls':
+            if model_name == 'separate':
+                whole_ppl = make_pipeline(
+                    pipe_pre_estimator.FE_ppl_cls,
+                    eval(prefix + 'exported_pipeline%d' % i)
+                )
+            else:
+                whole_ppl = make_pipeline(
+                    pipe_pre_estimator.FE_ppl_cls,
+                    eval(prefix + 'exported_pipeline_' + model_name)
+                )
+        elif pipe == 'benchmark':
+            if model_name == 'separate':
+                whole_ppl = make_pipeline(
+                    eval(prefix + 'exported_pipeline%d' % i)
+                )
+            else:
+                whole_ppl = make_pipeline(
+                    eval(prefix + 'exported_pipeline_' + model_name)
+                )
+        elif pipe == 'reg_FE':
+            if model_name == 'separate':
+                whole_ppl = make_pipeline(
+                    pipe_pre_estimator.ppl_reg,
+                    eval(prefix + 'exported_pipeline%d' % i)
+                )
+            else:
+                whole_ppl = make_pipeline(
+                    pipe_pre_estimator.ppl_reg,
+                    eval(prefix + 'exported_pipeline_' + model_name)
+                )
+
+        gscv = GridSearchCV(
+            whole_ppl,
+            param_grid=param_grid,
+            cv=TimeSeriesSplit(n_splits=3, test_size=20),
+            return_train_score=True,
+            n_jobs=3,
+            error_score='raise'
+        )
+        gscv.fit(X_train.copy(deep=True), yi)
+        results_list.append(gscv.cv_results_)
+        print('best_params_：', gscv.best_params_)
+        print('best_score_：', gscv.best_score_)
+
+        file_path = models_dir + r'asset' + str(i)
+        with open(file_path, 'wb') as f:
+            pickle.dump(gscv, f)
+
+    return results_list
