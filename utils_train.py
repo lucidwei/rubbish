@@ -231,13 +231,13 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
 
     if pipe == 'benchmark':
         import pipe_models_base
-        prefix = 'pipe_models_base.'
-    elif pipe == 'post_FE':
+        module = 'pipe_models_base'
+    elif pipe == 'reg_FE':
         import pipe_models_FE
-        prefix = 'pipe_models_FE.'
+        module = 'pipe_models_FE'
     elif pipe == 'cls':
         import pipe_models_cls
-        prefix = 'pipe_models_cls.'
+        module = 'pipe_models_cls'
     else:
         raise Exception('Specify right pipeline to get dump')
 
@@ -247,37 +247,43 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
         file_path = models_dir + r'/modeldump_asset' + str(i)
         yi = y_train.iloc[:, i].copy(deep=True)
         if not os.path.exists(file_path) or force_train:
-            if pipe == 'cls':
+            if pipe == 'benchmark':
                 if model_name == 'separate':
                     whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl_cls,
-                        eval(prefix + 'exported_pipeline%d' % i)
+                        eval(module + '.exported_pipeline%d' % i)
                     )
                 else:
                     whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl_cls,
-                        eval(prefix + 'exported_pipeline_' + model_name)
+                        eval(module + '.exported_pipeline_' + model_name)
                     )
-            elif pipe == 'benchmark':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        eval(prefix + 'exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        eval(prefix + 'exported_pipeline_' + model_name)
-                    )
-            elif pipe == 'post_FE':
+            elif pipe == 'reg_FE':
                 if model_name == 'separate':
                     whole_ppl = make_pipeline(
                         pipe_pre_estimator.FE_ppl,
-                        eval(prefix + 'exported_pipeline%d' % i)
+                        eval(module + '.exported_pipeline%d' % i)
                     )
                 else:
                     whole_ppl = make_pipeline(
                         pipe_pre_estimator.FE_ppl,
-                        eval(prefix + 'exported_pipeline_' + model_name)
+                        eval(module + '.exported_pipeline_' + model_name)
                     )
+            elif pipe == 'cls':
+                if model_name == 'separate':
+                    whole_ppl = make_pipeline(
+                        pipe_pre_estimator.FE_ppl_cls,
+                        eval(module + '.exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        pipe_pre_estimator.FE_ppl_cls,
+                        eval(module + '.exported_pipeline_' + model_name)
+                    )
+                    try:
+                        exec('from ' + module + ' import ' + 'param_list_' + model_name)
+                        whole_ppl[-1][0].set_params(**eval('param_list_' + model_name)[i])
+                    except:
+                        print('no param_list found, will use default params')
+
             whole_ppl.fit(X_train.copy(deep=True), yi)
             print('样本内score：', whole_ppl.score(X_train, yi))
 
@@ -296,78 +302,89 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
 
 def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
     import pipe_pre_estimator
-    import copy
+    import copy, datetime
+    print(datetime.datetime.now())
 
     dir = r'models_dump/'
     if not os.path.exists(dir):
         os.makedirs(dir)
-    models_dir = dir + r'gscv/'
+    models_dir = dir + r'gscv/' + model_name + r'/'
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
 
     if pipe == 'benchmark':
         import pipe_models_base
-        prefix = 'pipe_models_base.'
+        module = 'pipe_models_base'
     elif pipe == 'reg_FE':
         import pipe_models_FE
-        prefix = 'pipe_models_FE.'
+        module = 'pipe_models_FE'
     elif pipe == 'cls':
         import pipe_models_cls
-        prefix = 'pipe_models_cls.'
+        module = 'pipe_models_cls'
     else:
         raise Exception('Specify right pipeline to get dump')
 
     models_num = len(y_train.columns)
     results_list = []
+
     for i in range(0, models_num):
-        yi = y_train.iloc[:, i].copy(deep=True)
-        if pipe == 'cls':
-            if model_name == 'separate':
-                whole_ppl = make_pipeline(
-                    pipe_pre_estimator.FE_ppl_cls,
-                    eval(prefix + 'exported_pipeline%d' % i)
-                )
-            else:
-                whole_ppl = make_pipeline(
-                    pipe_pre_estimator.FE_ppl_cls,
-                    eval(prefix + 'exported_pipeline_' + model_name)
-                )
-        elif pipe == 'benchmark':
-            if model_name == 'separate':
-                whole_ppl = make_pipeline(
-                    eval(prefix + 'exported_pipeline%d' % i)
-                )
-            else:
-                whole_ppl = make_pipeline(
-                    eval(prefix + 'exported_pipeline_' + model_name)
-                )
-        elif pipe == 'reg_FE':
-            if model_name == 'separate':
-                whole_ppl = make_pipeline(
-                    pipe_pre_estimator.ppl_reg,
-                    eval(prefix + 'exported_pipeline%d' % i)
-                )
-            else:
-                whole_ppl = make_pipeline(
-                    pipe_pre_estimator.ppl_reg,
-                    eval(prefix + 'exported_pipeline_' + model_name)
-                )
-
-        gscv = GridSearchCV(
-            whole_ppl,
-            param_grid=param_grid,
-            cv=TimeSeriesSplit(n_splits=3, test_size=20),
-            return_train_score=True,
-            n_jobs=3,
-            error_score='raise'
-        )
-        gscv.fit(X_train.copy(deep=True), yi)
-        results_list.append(gscv.cv_results_)
-        print('best_params_：', gscv.best_params_)
-        print('best_score_：', gscv.best_score_)
-
         file_path = models_dir + r'asset' + str(i)
-        with open(file_path, 'wb') as f:
-            pickle.dump(gscv, f)
+        if os.path.exists(file_path):
+            print('asset %d 已经搜索过' % i)
+            continue
+        else:
+            yi = y_train.iloc[:, i].copy(deep=True)
+            if pipe == 'cls':
+                if model_name == 'separate':
+                    whole_ppl = make_pipeline(
+                        pipe_pre_estimator.FE_ppl_cls,
+                        eval(module + '.exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        pipe_pre_estimator.FE_ppl_cls,
+                        eval(module + '.exported_pipeline_' + model_name)
+                    )
+            elif pipe == 'benchmark':
+                if model_name == 'separate':
+                    whole_ppl = make_pipeline(
+                        eval(module + '.exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        eval(module + '.exported_pipeline_' + model_name)
+                    )
+            elif pipe == 'reg_FE':
+                if model_name == 'separate':
+                    whole_ppl = make_pipeline(
+                        pipe_pre_estimator.ppl_reg,
+                        eval(module + '.exported_pipeline%d' % i)
+                    )
+                else:
+                    whole_ppl = make_pipeline(
+                        pipe_pre_estimator.ppl_reg,
+                        eval(module + '.exported_pipeline_' + model_name)
+                    )
+
+            gscv = GridSearchCV(
+                whole_ppl,
+                param_grid=param_grid,
+                cv=TimeSeriesSplit(n_splits=4, test_size=20),
+                return_train_score=True,
+                n_jobs=-1,
+                error_score='raise',
+                verbose=4
+            )
+            gscv.fit(X_train.copy(deep=True), yi)
+            results_list.append(gscv.cv_results_)
+
+            with open(file_path, 'wb') as f:
+                pickle.dump(gscv, f)
+            print('asset %d 搜索完毕并保存' % i)
+
+            print(datetime.datetime.now())
+            print('best_params_：', gscv.best_params_)
+            print('best_score_：', gscv.best_score_)
+            # print('C_：', gscv.best_estimator_[-1][0].C_)
 
     return results_list

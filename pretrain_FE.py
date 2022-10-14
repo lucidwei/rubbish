@@ -25,7 +25,7 @@ max_time_mins = 120
 cachedir = utils.get_path('cachedir')
 
 pipe = 'cls'  ## 'benchmark', 'post_FE'(reg), 'cls'
-model_name = 'gbori'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
+model_name = 'logit'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
 
 
 #############预处理##############
@@ -40,27 +40,23 @@ else:
     y = y_ret
 
 if __name__ == "__main__":
-    # i = 0  # 可作为循环训练起点
-    # for yi_ind, yi in y.iloc[:, i:].iteritems():
-    #     if if_cls:
-    #         X_selected = pipe_pre_estimator.FE_ppl_cls.fit_transform(copy.deepcopy(X), yi)
-    #     pipe, X_test, y_test = utils_train.generate_1_pipe_auto(if_cls, X_selected, yi, generations, population_size,
-    #                                                       max_time_mins, cachedir,
-    #                                                       pipe_num=i)
-    #     preds = pipe.predict(X_test)
-    #     # print('第%d个资产的Pipe r2 score:' % i, r2_score(y_test, preds))
-    #     print('第%d个资产的Pipe accuracy_score:' % i, accuracy_score(y_test, preds))
-    #     i += 1
 
     #####GSCV得到最佳hyper params
     param_grid = {
-        # 'pipeline__gradientboostingclassifier__min_samples_split': [0.3, 0.5, 0.6],
-        # 'pipeline__gradientboostingclassifier__max_features': [0.3, 1, 'auto'],
-        'pipeline__gradientboostingclassifier__max_depth': [2],
-        'pipeline__gradientboostingclassifier__min_samples_leaf': [0.3],
-        #     'pipeline__gradientboostingclassifier__learning_rate': [0.01, 0.1, 0.5],
-        #     'pipeline__gradientboostingclassifier__n_estimators': [100, 200],
-        #     'pipeline__gradientboostingclassifier__subsample': [0.9, 1]
+        # 'pipeline__gradientboostingclassifier__min_samples_split': [0.5, 0.6, 0.7, 0.8], # 0.7最好
+        # 'pipeline__gradientboostingclassifier__max_features': [0.6, 0.7, 0.8, 0.9, 'sqrt'], # 'sqrt'asset1表现好
+        # 'pipeline__gradientboostingclassifier__max_depth': [2, 3],
+        # 'pipeline__gradientboostingclassifier__min_samples_leaf': [0.3],
+        # 'pipeline__gradientboostingclassifier__learning_rate': [0.01, 0.1, 0.5],
+        # 'pipeline__gradientboostingclassifier__n_estimators': [100, 200],
+        # 'pipeline__gradientboostingclassifier__subsample': [0.9, 1]
+        # 'pipeline__linearsvc__dual': [True, False],
+        # 'pipeline__linearsvc__fit_intercept': [True, False],
+        # 'pipeline__linearsvc__C': [0.01, 0.1, 1, 10],
+        # 'pipeline__logisticregressioncv__fit_intercept': [True, False],
+        # 'pipeline__logisticregressioncv__tol': [1e-5, 1e-4, 1e-3, 0.01]
+        'pipeline__logisticregression__tol': [1e-4, 1e-3, 0.01],
+        'pipeline__logisticregression__C': [1e-3, 0.01, 0.0464]
     }
     res_list = utils_train.get_gscv_result(X, y, pipe, model_name, param_grid)
     # 在一个资产里7分钟一个参数，要ignore warning

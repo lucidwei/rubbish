@@ -4,9 +4,10 @@ from tpot.builtins import StackingEstimator, OneHotEncoder
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
 from sklearn.svm import LinearSVC
-from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import SGDClassifier, ElasticNet, LogisticRegressionCV, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.model_selection import TimeSeriesSplit
 from xgboost import XGBClassifier
 from copy import copy
 
@@ -123,6 +124,10 @@ exported_pipeline_svc3 = make_pipeline(
     LinearSVC(C=0.001, dual=True, loss="squared_hinge", penalty="l2", tol=0.001)
 )
 
+exported_pipeline_svccv = make_pipeline(
+    LinearSVC()
+)
+
 # 再pretrain from log8
 exported_pipeline_gb8 = make_pipeline(
     GradientBoostingClassifier(learning_rate=0.5, max_depth=4, max_features=0.05, min_samples_leaf=16, min_samples_split=4, n_estimators=100, subsample=0.6)
@@ -137,11 +142,11 @@ exported_pipeline_gb1 = make_pipeline(
 )
 
 exported_pipeline_gb = make_pipeline(
-    GradientBoostingClassifier(learning_rate=0.1, max_depth=3, max_features=0.75, min_samples_leaf=0.3, min_samples_split=0.6, n_estimators=200, subsample=0.9)
+    GradientBoostingClassifier(learning_rate=0.1, max_depth=2, max_features=0.75, min_samples_leaf=0.3, min_samples_split=0.6, n_estimators=200, subsample=0.9)
 )
 
-exported_pipeline_gbori = make_pipeline(
-    GradientBoostingClassifier()
+exported_pipeline_gbcv = make_pipeline(
+    GradientBoostingClassifier(learning_rate=0.02, n_estimators=200, min_samples_leaf=0.3, min_samples_split=0.7, max_depth=2, max_features=0.6)
 )
 
 # 适合1679 - 0.47, 43, 46, 69
@@ -173,3 +178,28 @@ exported_pipeline_stksvc = make_pipeline(
                                 subsample=0.6000000000000001, verbosity=0)),
     LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
 )
+
+exported_pipeline_encv = make_pipeline(
+    ElasticNet()
+)
+
+exported_pipeline_logitcv = make_pipeline(
+    LogisticRegressionCV(cv=TimeSeriesSplit(), max_iter=1000, fit_intercept=True)
+)
+
+exported_pipeline_logit = make_pipeline(
+    LogisticRegression(max_iter=1000, fit_intercept=True)
+)
+
+param_list_logit = [
+    {'C': 0.1, 'tol': 1e-3},
+    {'C': 0.1, 'tol': 1e-3},
+    {'C': 0.01, 'tol': 1e-4},
+    {'C': 1e-3, 'tol': 1e-3},
+    {'C': 1e-3, 'tol': 1e-3},
+    {'C': 1e-2, 'tol': 1e-4},
+    {'C': 1e-1, 'tol': 1e-2},
+    {'C': 0.046, 'tol': 1e-3},
+    {'C': 0.046, 'tol': 1e-2},
+    {'C': 1e-2, 'tol': 1e-4},
+]
