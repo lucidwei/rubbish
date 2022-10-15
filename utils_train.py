@@ -216,10 +216,61 @@ tpot_config = {
     }
 }
 
+def read_pipeline(pipe_version, model_name, asset_num):
+    import pipe_pre_estimator
+
+    if pipe_version == 'benchmark':
+        import estimators_base
+        module = 'estimators_base'
+    elif pipe_version == 'reg_FE':
+        import estimators_reg
+        module = 'estimators_reg'
+    elif pipe_version == 'cls':
+        import estimators_cls
+        module = 'estimators_cls'
+    else:
+        raise Exception('Specify right pipeline to get dump')
+
+    if pipe_version == 'benchmark':
+        if model_name == 'separate':
+            whole_ppl = make_pipeline(
+                eval(module + '.exported_pipeline%d' % asset_num)
+            )
+        else:
+            whole_ppl = make_pipeline(
+                eval(module + '.exported_pipeline_' + model_name)
+            )
+    elif pipe_version == 'reg_FE':
+        if model_name == 'separate':
+            whole_ppl = make_pipeline(
+                pipe_pre_estimator.ppl_reg,
+                eval(module + '.exported_pipeline%d' % asset_num)
+            )
+        else:
+            whole_ppl = make_pipeline(
+                pipe_pre_estimator.ppl_reg,
+                eval(module + '.exported_pipeline_' + model_name)
+            )
+    elif pipe_version == 'cls':
+        if model_name == 'separate':
+            whole_ppl = make_pipeline(
+                pipe_pre_estimator.ppl_cls_sup,
+                eval(module + '.exported_pipeline%d' % asset_num)
+            )
+        else:
+            whole_ppl = make_pipeline(
+                pipe_pre_estimator.ppl_cls_sup,
+                eval(module + '.exported_pipeline_' + model_name)
+            )
+            try:
+                exec('from ' + module + ' import ' + 'param_list_' + model_name)
+                whole_ppl[-1][0].set_params(**eval('param_list_' + model_name)[asset_num])
+            except:
+                print('no param_list found for this estimator, will use default params')
+    return whole_ppl
 
 #### 利用得到的pipelines训练得到可执行模型
 def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
-    import pipe_pre_estimator
     import copy
 
     dir = r'models_dump/' + version
@@ -229,61 +280,13 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
 
-    if pipe == 'benchmark':
-        import pipe_models_base
-        module = 'pipe_models_base'
-    elif pipe == 'reg_FE':
-        import pipe_models_FE
-        module = 'pipe_models_FE'
-    elif pipe == 'cls':
-        import pipe_models_cls
-        module = 'pipe_models_cls'
-    else:
-        raise Exception('Specify right pipeline to get dump')
-
     models_num = len(y_train.columns)
     models = []
     for i in range(0, models_num):
         file_path = models_dir + r'/modeldump_asset' + str(i)
         yi = y_train.iloc[:, i].copy(deep=True)
         if not os.path.exists(file_path) or force_train:
-            if pipe == 'benchmark':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        eval(module + '.exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        eval(module + '.exported_pipeline_' + model_name)
-                    )
-            elif pipe == 'reg_FE':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl,
-                        eval(module + '.exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl,
-                        eval(module + '.exported_pipeline_' + model_name)
-                    )
-            elif pipe == 'cls':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl_cls,
-                        eval(module + '.exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl_cls,
-                        eval(module + '.exported_pipeline_' + model_name)
-                    )
-                    try:
-                        exec('from ' + module + ' import ' + 'param_list_' + model_name)
-                        whole_ppl[-1][0].set_params(**eval('param_list_' + model_name)[i])
-                    except:
-                        print('no param_list found, will use default params')
-
+            whole_ppl = read_pipeline(pipe, model_name, i)
             whole_ppl.fit(X_train.copy(deep=True), yi)
             print('样本内score：', whole_ppl.score(X_train, yi))
 
@@ -301,7 +304,6 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
 
 
 def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
-    import pipe_pre_estimator
     import copy, datetime
     print(datetime.datetime.now())
 
@@ -311,18 +313,6 @@ def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
     models_dir = dir + r'gscv/' + model_name + r'/'
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
-
-    if pipe == 'benchmark':
-        import pipe_models_base
-        module = 'pipe_models_base'
-    elif pipe == 'reg_FE':
-        import pipe_models_FE
-        module = 'pipe_models_FE'
-    elif pipe == 'cls':
-        import pipe_models_cls
-        module = 'pipe_models_cls'
-    else:
-        raise Exception('Specify right pipeline to get dump')
 
     models_num = len(y_train.columns)
     results_list = []
@@ -334,38 +324,8 @@ def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
             continue
         else:
             yi = y_train.iloc[:, i].copy(deep=True)
-            if pipe == 'cls':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl_cls,
-                        eval(module + '.exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.FE_ppl_cls,
-                        eval(module + '.exported_pipeline_' + model_name)
-                    )
-            elif pipe == 'benchmark':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        eval(module + '.exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        eval(module + '.exported_pipeline_' + model_name)
-                    )
-            elif pipe == 'reg_FE':
-                if model_name == 'separate':
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.ppl_reg,
-                        eval(module + '.exported_pipeline%d' % i)
-                    )
-                else:
-                    whole_ppl = make_pipeline(
-                        pipe_pre_estimator.ppl_reg,
-                        eval(module + '.exported_pipeline_' + model_name)
-                    )
 
+            whole_ppl = read_pipeline(pipe, model_name, i)
             gscv = GridSearchCV(
                 whole_ppl,
                 param_grid=param_grid,
@@ -373,7 +333,8 @@ def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
                 return_train_score=True,
                 n_jobs=-1,
                 error_score='raise',
-                verbose=4
+                verbose=4,
+                scoring='r2'
             )
             gscv.fit(X_train.copy(deep=True), yi)
             results_list.append(gscv.cv_results_)

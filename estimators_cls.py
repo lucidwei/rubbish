@@ -4,7 +4,7 @@ from tpot.builtins import StackingEstimator, OneHotEncoder
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier, ExtraTreesClassifier, RandomForestClassifier
 from sklearn.svm import LinearSVC
-from sklearn.linear_model import SGDClassifier, ElasticNet, LogisticRegressionCV, LogisticRegression
+from sklearn.linear_model import SGDClassifier, LogisticRegressionCV, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import TimeSeriesSplit
@@ -179,9 +179,6 @@ exported_pipeline_stksvc = make_pipeline(
     LinearSVC(C=0.01, dual=True, loss="hinge", penalty="l2", tol=0.1)
 )
 
-exported_pipeline_encv = make_pipeline(
-    ElasticNet()
-)
 
 exported_pipeline_logitcv = make_pipeline(
     LogisticRegressionCV(cv=TimeSeriesSplit(), max_iter=1000, fit_intercept=True)
@@ -203,3 +200,4 @@ param_list_logit = [
     {'C': 0.046, 'tol': 1e-2},
     {'C': 1e-2, 'tol': 1e-4},
 ]
+

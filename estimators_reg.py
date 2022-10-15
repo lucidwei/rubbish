@@ -1,7 +1,7 @@
 from sklearn.decomposition import PCA
 from sklearn.ensemble import AdaBoostRegressor, ExtraTreesRegressor,GradientBoostingRegressor, RandomForestRegressor
 from sklearn.feature_selection import VarianceThreshold, SelectFwe, f_regression,SelectPercentile
-from sklearn.linear_model import SGDRegressor, RidgeCV, LassoLarsCV, ElasticNetCV
+from sklearn.linear_model import SGDRegressor, RidgeCV, LassoLarsCV, ElasticNetCV, ElasticNet
 from sklearn.pipeline import make_pipeline, make_union
 from sklearn.svm import LinearSVR
 from tpot.builtins import StackingEstimator
@@ -104,3 +104,10 @@ exported_pipeline9 = make_pipeline(
     StackingEstimator(estimator=LinearSVR(C=0.0001, dual=True, epsilon=0.0001, loss="squared_epsilon_insensitive", tol=0.0001)),
     RandomForestRegressor(bootstrap=True, max_features=0.7500000000000001, min_samples_leaf=1, min_samples_split=7, n_estimators=100)
 )
+
+exported_pipeline_enet = make_pipeline(
+    ElasticNet(random_state=1996)
+)
+# param_list_enet = [
+#     {'C': 0.1, 'tol': 1e-3},
+# ]

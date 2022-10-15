@@ -291,10 +291,16 @@ def if_bin_col(X):
 
 
 def if_numer_col(X):
-    return ~if_bin_col(X)
+    mask = ~if_bin_col(X)
+    if not (mask==1).all():
+        print('补充框架已pass through至transformed X')
+    return mask
 
 # 保证supplements数据喂入estimator
-FE_ppl_cls = ColumnTransformer([
+ppl_cls_sup = ColumnTransformer([
     ('pipe_cls', ppl_cls, if_numer_col),
-    # ('cat', FunctionTransformer(copy.copy), if_numer_col)
+], remainder='passthrough')
+
+ppl_reg_sup = ColumnTransformer([
+    ('pipe_reg', ppl_reg, if_numer_col),
 ], remainder='passthrough')
