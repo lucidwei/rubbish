@@ -293,12 +293,13 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
             # 写入缓存
             with open(file_path, 'wb') as f:
                 pickle.dump(whole_ppl, f)
-            models.append(whole_ppl)
+            models.append(copy.deepcopy(whole_ppl))
             print('model %d pickle saved and appended' % i)
         else:
             with open(file_path, 'rb') as f:
                 models.append(pickle.load(f))
             print('model %d pickle loaded' % i)
+            # print('样本内score：', models[i].score(X_train, yi))
 
     return models
 
@@ -334,7 +335,7 @@ def get_gscv_result(X_train, y_train, pipe, model_name, param_grid):
                 n_jobs=-1,
                 error_score='raise',
                 verbose=4,
-                scoring='r2'
+                # scoring='r2'
             )
             gscv.fit(X_train.copy(deep=True), yi)
             results_list.append(gscv.cv_results_)

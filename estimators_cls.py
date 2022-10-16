@@ -149,12 +149,7 @@ exported_pipeline_gbcv = make_pipeline(
     GradientBoostingClassifier(learning_rate=0.02, n_estimators=200, min_samples_leaf=0.3, min_samples_split=0.7, max_depth=2, max_features=0.6)
 )
 
-# 适合1679 - 0.47, 43, 46, 69
-# model appendging bugx修改后：
-# 适合2 - 0.43
-exported_pipeline_rf = make_pipeline(
-    RandomForestClassifier(n_estimators=300, max_depth=3, bootstrap=False, random_state=1996)
-)
+
 # 再pretrain from log7&5
 exported_pipeline_mlp7 = make_pipeline(
     MLPClassifier(alpha=0.1, learning_rate_init=0.001)
@@ -201,3 +196,18 @@ param_list_logit = [
     {'C': 1e-2, 'tol': 1e-4},
 ]
 
+# 适合1679 - 0.47, 43, 46, 69
+# model appendging bugx修改后：
+# 适合2 - 0.43
+exported_pipeline_rf0 = make_pipeline(
+    RandomForestClassifier(n_estimators=300, max_depth=3, bootstrap=False, random_state=1996)
+)
+exported_pipeline_rf = make_pipeline(
+    RandomForestClassifier(n_estimators=300, max_depth=3, min_samples_split=0.15, oob_score=True, random_state=1996)
+)
+exported_pipeline_rf02 = make_pipeline(
+    RandomForestClassifier(n_estimators=300, max_depth=3, min_samples_split=0.2, oob_score=True, random_state=1996)
+)
+exported_pipeline_rf03 = make_pipeline(
+    RandomForestClassifier(n_estimators=300, max_depth=3, min_samples_split=0.3, oob_score=True, random_state=1996)
+)
