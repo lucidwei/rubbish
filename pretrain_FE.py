@@ -7,13 +7,13 @@ import utils, pipe_pre_estimator, utils_train
 # 文件处理参数
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 if_update = False  ## 原始数据文件是否已经更新
-use_cache = True  ## 预处理逻辑/参数变更 or 缓存的pickle需要更新时，设为False (注意利用的数据格式，避免用本月行情预测本月行情。)
+use_cache = False  ## 预处理逻辑/参数变更 or 缓存的pickle需要更新时，设为False (注意利用的数据格式，避免用本月行情预测本月行情。)
 
 # 预处理参数
-if_cls = False
+if_cls = True
 align_to = 'month'
 use_lag_x = 15
-use_sup = True  ## 纳入美林时钟等补充框架
+use_sup = 4  ## 纳入美林时钟等补充框架
 begT = '2004-01'
 endT = datetime.date.today()
 asset_sel = []
@@ -24,8 +24,8 @@ population_size = 100
 max_time_mins = 120
 cachedir = utils.get_path('cachedir')
 
-pipe = 'reg_FE'  ## 'benchmark', 'reg_FE', 'cls'
-model_name = 'enet'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
+pipe = 'cls'  ## 'benchmark', 'reg_FE', 'cls'
+model_name = 'sgdcv'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
 
 
 #############预处理##############
@@ -57,8 +57,14 @@ if __name__ == "__main__":
         # 'pipeline__logisticregressioncv__tol': [1e-5, 1e-4, 1e-3, 0.01]
         # 'pipeline__logisticregression__tol': [1e-4, 1e-3, 0.01],
         # 'pipeline__logisticregression__C': [1e-3, 0.01, 0.0464],
-        'pipeline-2__elasticnet__alpha': [1e-4, 1e-2, 1],
-        'pipeline-2__elasticnet__l1_ratio': [0.5, 0.7, 0.9],
+        # 'pipeline-2__elasticnet__alpha': [1e-4, 1e-2, 1],
+        # 'pipeline-2__elasticnet__l1_ratio': [0.5, 0.7, 0.9],
+        # 'pipeline__randomforestclassifier__oob_score': [True, False],
+        # 'pipeline__randomforestclassifier__max_depth': [2, 3],
+        # 'pipeline__randomforestclassifier__min_samples_split': [0.1, 0.2, 0.3, 4, 6, 12, 18],
+        'pipeline__sgdclassifier__alpha': [1e-2, 1e-3],
+        'pipeline__sgdclassifier__eta0': [0.1, 0.01, 0.001],
+        'pipeline__sgdclassifier__l1_ratio': [1, 0.75, 0.5]
     }
     res_list = utils_train.get_gscv_result(X, y, pipe, model_name, param_grid)
     # 在一个资产里7分钟一个参数，要ignore warning

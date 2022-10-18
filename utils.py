@@ -174,6 +174,9 @@ def get_preproc_data(ori_data_path, if_update, use_cache, align_to, use_x_lags, 
         X3 = pd.DataFrame(X2, index=X1.index, columns=X1.columns)
         if use_sup:
             sup = get_supplements()
+            if isinstance(use_sup, int) and use_sup>0:
+                sup = sup.shift(-use_sup)
+                sup.fillna(method='ffill', inplace=True)
             encoded = OneHotEncoder(sparse=False).fit_transform(sup.to_frame('sup_df'))
             enc_df = pd.DataFrame(encoded, index=sup.index, columns=['cn∏¥À’', 'cn÷Õ’«', 'cnÀ•ÕÀ', 'cnπ˝»»'])
             X3 = pd.concat([X3, enc_df], join='inner', axis=1)

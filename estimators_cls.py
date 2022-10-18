@@ -79,9 +79,12 @@ exported_pipeline9 = make_pipeline(
 # )
 
 # 适合pipe9 -0.52
-# exported_pipeline_sgd = make_pipeline(
-#     SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, shuffle=False, learning_rate="adaptive", loss="modified_huber", penalty="elasticnet", power_t=1.0, average=10)
-# )
+exported_pipeline_sgd = make_pipeline(
+    SGDClassifier(alpha=0.001, eta0=0.01, fit_intercept=True, l1_ratio=0.5, shuffle=False, learning_rate="adaptive", loss="modified_huber", penalty="elasticnet", power_t=1.0, average=10)
+)
+exported_pipeline_sgdcv = make_pipeline(
+    SGDClassifier(shuffle=False, learning_rate="adaptive", loss="modified_huber", penalty="elasticnet", power_t=1.0, average=10)
+)
 # 再pretrain from log9
 exported_pipeline_sgd9 = make_pipeline(
     SGDClassifier(alpha=0.0, eta0=0.1, fit_intercept=False, l1_ratio=0.75, learning_rate="constant", loss="squared_hinge", penalty="elasticnet", power_t=1.0, average=10)
@@ -163,8 +166,9 @@ exported_pipeline_mlp0 = make_pipeline(
 # 026 - 0.42 46 42
 exported_pipeline_stksvc = make_pipeline(
     StackingEstimator(estimator=GradientBoostingClassifier(learning_rate=0.1, max_depth=4, max_features=0.4,
-                                                           min_samples_leaf=7, min_samples_split=16, n_estimators=100, subsample=0.9000000000000001)),
-    StackingEstimator(estimator=RandomForestClassifier(criterion="entropy", max_depth=3, min_samples_leaf=3, min_samples_split=12)),
+                                                           min_samples_leaf=7, min_samples_split=16, n_estimators=100, subsample=0.9)),
+    StackingEstimator(estimator=RandomForestClassifier(criterion="entropy", max_depth=3, min_samples_leaf=3, min_samples_split=12, random_state=1996)),
+    StackingEstimator(RandomForestClassifier(n_estimators=300, max_depth=3, min_samples_split=0.3, oob_score=True, random_state=1996)),
     StackingEstimator(estimator=MLPClassifier(alpha=0.0001, learning_rate_init=0.1)),
     StackingEstimator(estimator=SGDClassifier(alpha=0.0, eta0=1.0, fit_intercept=False, l1_ratio=0.5, learning_rate="invscaling",
                                               loss="hinge", penalty="elasticnet", power_t=1.0)),

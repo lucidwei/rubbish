@@ -294,7 +294,7 @@ def get_models_dump(X_train, y_train, pipe, version, force_train, model_name):
             with open(file_path, 'wb') as f:
                 pickle.dump(whole_ppl, f)
             models.append(copy.deepcopy(whole_ppl))
-            print('model %d pickle saved and appended' % i)
+            print('model %d pickle saved and appended\n' % i)
         else:
             with open(file_path, 'rb') as f:
                 models.append(pickle.load(f))

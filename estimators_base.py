@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LassoLarsCV
 from sklearn.svm import LinearSVR
-from sklearn.ensemble import ExtraTreesRegressor, GradientBoostingRegressor
+from sklearn.ensemble import ExtraTreesRegressor, GradientBoostingRegressor, RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel, SelectPercentile, mutual_info_regression
 from sklearn.decomposition import PCA
 from sklearn.cluster import FeatureAgglomeration
@@ -69,4 +69,8 @@ exported_pipeline9 = make_pipeline(
     SelectPercentile(score_func=mutual_info_regression, percentile=23),
     RobustScaler(),
     LassoLarsCV(normalize=True)
+)
+
+exported_pipeline_rf03 = make_pipeline(
+    RandomForestClassifier(n_estimators=300, max_depth=3, min_samples_split=0.3, oob_score=True, random_state=1996)
 )

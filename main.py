@@ -9,30 +9,32 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import utils, utils_eda, utils_train
 from evaluator import Evaluator
+import evaluator as ev
 
 # 文件处理参数
 PATH_ORI_DATA = r'C:\Users\lucid\Documents\长江实习\课题之自上而下\data'
 if_update = False  ## 原始数据文件是否已经更新
-use_cache = True  ## 预处理逻辑/参数变更 or 缓存的pickle需要更新时，设为False (注意利用的数据格式，避免用本月行情预测本月行情。)
-version = 'clock_rf_debug'
+use_cache = False  ## 预处理逻辑/参数变更 or 缓存的pickle需要更新时，设为False (注意利用的数据格式，避免用本月行情预测本月行情。)
+version = 'clklead1_rf03_1017'
 
 # 预处理参数
 if_cls = True
 align_to = 'month'
 use_lag_x = 15
-use_sup = True  ## 纳入美林时钟等补充框架
+use_sup_lead = 1  ## 纳入美林时钟等补充框架
 begT = '2004-01'
 endT = datetime.date.today()
 asset_sel = []
 
 # 训练参数
 n_splits = 10  ## 滚动训练次数
+test_size = 12
 pipe = 'cls'  ## 'benchmark', 'post_FE'(reg), 'cls'
 force_train = False  ## 因为每个时间段筛选出的特征不一样，所以必须重新get dump，为了节省时间调试可以False
-model_name = 'rf'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
+model_name = 'rf03'  ## 'separate'(use topot gen) or specific model name, availables see pipes file
 
 #############预处理##############
-X, y_ret = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, use_lag_x, use_sup, begT, endT)
+X, y_ret = utils.get_preproc_data(PATH_ORI_DATA, if_update, use_cache, align_to, use_lag_x, use_sup_lead, begT, endT)
 if asset_sel:
     y_ret = y_ret.iloc[:, asset_sel]
 
@@ -43,11 +45,11 @@ else:
     y = y_ret
 
 #############训练##############
-tscv = TimeSeriesSplit(n_splits=n_splits)
+tscv = TimeSeriesSplit(n_splits=n_splits, test_size=test_size)
 models_list = {}
 # 原始的Xy切片之前要deepcopy，否则可能莫名其妙篡改原始数据
 for train_index, test_index in tscv.split(X.copy(deep=True)):
-    if X.index[len(train_index)] < pd.Period('2014-1'):
+    if X.index[len(train_index)] < pd.Period('2015-7'):
         continue
     else:
         X_train, y_train = X.copy(deep=True).iloc[train_index, :], y.copy(deep=True).iloc[train_index, :]
@@ -61,7 +63,7 @@ for train_index, test_index in tscv.split(X.copy(deep=True)):
 #############测试和评估##############
 evalor_list = []
 for train_index, test_index in tscv.split(X.copy(deep=True)):
-    if X.index[len(train_index)] < pd.Period('2014-1'):
+    if X.index[len(train_index)] < pd.Period('2015-7'):
         continue
     else:
         X_train, X_test = X.copy(deep=True).iloc[train_index, :], X.copy(deep=True).iloc[test_index, :]
@@ -84,7 +86,14 @@ port_ws, bench_ws = [i.port_worth for i in evalor_list], [i.bench_worth for i in
 scoress = [i.scores for i in evalor_list]
 port_poss = [i.port_pos for i in evalor_list]
 
+con_pws = ev.get_continue_worth(port_ws)
+con_bws = ev.get_continue_worth(bench_ws)
 
+a=ev.get_perfo_hist(con_pws, con_bws)
+
+b=ev.get_perfo_stats(con_pws, con_bws, a)
+
+c=ev.get_asset_stats(scoress, port_poss, y_ret)
 
 # 训练测试没拆开时
 # tscv = TimeSeriesSplit(n_splits=10)

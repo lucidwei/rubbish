@@ -272,6 +272,7 @@ ppl_reg = Pipeline([
 ppl_cls = Pipeline([
     # ('fillna0', KNNImputer()),
     ('scaler0', StandardScaler()),
+    ('delcorr', FindCorrelation(0.95)),
     ('select_40n', select_40n_cls),
     ('delcorr0', FindCorrelation(0.95)),
     # 通过增加测试集，使得测试集能用到训练集的部分近期数据来生成feature

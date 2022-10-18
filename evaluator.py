@@ -129,3 +129,107 @@ def get_continue_worth(ws):
         ws[i] = ws[i] * ws[i-1].iloc[-1, :]
         con.append(ws[i])
     return con
+
+def save_output(version, cpwl, cbwl, score_list, port_pos_list, y_ret):
+    import os
+    if not os.path.exists('data/results/'):
+        os.makedirs('data/results/')
+    perfo_hist = get_perfo_hist(cpwl, cbwl)
+    perfo_hist.to_excel('data/results/'+version+'.xlsx', sheet_name='perfo')
+    perfo_stats = get_perfo_stats(cpwl, cbwl, perfo_hist)
+    asset_stats = get_asset_stats(score_list, port_pos_list, y_ret)
+
+    with pd.ExcelWriter('data/results/'+version+'.xlsx', mode='a', engine='openpyxl') as writer:
+        perfo_stats.to_excel(writer, sheet_name="perfo_stats")
+        asset_stats.to_excel(writer, sheet_name="asset_stats")
+
+    return
+
+def get_perfo_hist(cpwl, cbwl):
+    '''
+    :param cpwl: conti_port_worth_list
+    :param cbwl: conti_bench_worth_list
+    :return:
+    '''
+    port_worth_hist = pd.DataFrame()
+    bench_worth_hist = pd.DataFrame()
+    for i in cpwl:
+        port_worth_hist = pd.concat([port_worth_hist, i])
+    for i in cbwl:
+        bench_worth_hist = pd.concat([bench_worth_hist, i])
+    df_perfo_hist = pd.concat([port_worth_hist, bench_worth_hist], axis=1)
+
+    return df_perfo_hist
+
+def get_perfo_stats(cpwl, cbwl, perfo_hist):
+    # 日期，策略统计，基准统计
+    #  其实有点毛病，第一个月收益没算进去
+    def max_drawdown(array):
+        drawdowns = []
+        max_so_far = array[0]
+        for i in range(len(array)):
+            if array[i] > max_so_far:
+                drawdown = 0
+                drawdowns.append(drawdown)
+                max_so_far = array[i]
+            else:
+                drawdown = max_so_far - array[i]
+                drawdowns.append(drawdown)
+        return (max(drawdowns))
+    def sharpe_ratio(worth):
+        ret = (worth[-1] - worth[0])/worth[0]
+        sigma = worth.std()*np.sqrt(len(worth))
+        return (ret/sigma)
+    def ann_ret(worth):
+        return ((worth[-1] - worth[0])/worth[0])/(len(worth)/12)
+
+    index = [i.index[-1] for i in cpwl]
+    df_perfo_stats = pd.DataFrame(index=index,
+                                  columns=['port_年化收益率', 'port_夏普比率', 'port_最大回撤', '年化超额',
+                                            '年化收益率', '夏普比率', '最大回撤'])
+    for i in cbwl:
+        df_perfo_stats.loc[i.index[-1], '年化收益率'] = ann_ret(np.array(i))
+        df_perfo_stats.loc[i.index[-1], '夏普比率'] = sharpe_ratio(np.array(i))
+        df_perfo_stats.loc[i.index[-1], '最大回撤'] = max_drawdown(np.array(i))
+    for i in cpwl:
+        df_perfo_stats.loc[i.index[-1], 'port_年化收益率'] = ann_ret(np.array(i))
+        df_perfo_stats.loc[i.index[-1], 'port_夏普比率'] = sharpe_ratio(np.array(i))
+        df_perfo_stats.loc[i.index[-1], 'port_最大回撤'] = max_drawdown(np.array(i))
+        df_perfo_stats.loc[i.index[-1], '年化超额'] = ann_ret(np.array(i)) - df_perfo_stats.loc[i.index[-1], '年化收益率']
+    overall = {
+        'port_年化收益率':ann_ret(np.array(perfo_hist['port_worth'])), 'port_夏普比率':sharpe_ratio(np.array(perfo_hist['port_worth'])),
+                  'port_最大回撤':max_drawdown(np.array(perfo_hist['port_worth'])), '年化超额':ann_ret(np.array(perfo_hist['port_worth'])) - ann_ret(np.array(perfo_hist['bench_worth'])),
+        '年化收益率':ann_ret(np.array(perfo_hist['bench_worth'])), '夏普比率':sharpe_ratio(np.array(perfo_hist['bench_worth'])), '最大回撤':max_drawdown(np.array(perfo_hist['bench_worth']))
+    }
+
+    row_overall = pd.DataFrame(overall, columns=df_perfo_stats.columns, index=['整体'])
+    df_perfo_stats= pd.concat([df_perfo_stats, row_overall], axis=0)
+
+    return pd.DataFrame(df_perfo_stats, dtype=float).round(3)
+
+def get_asset_stats(score_list, port_pos_list, y_ret):
+    # 品种，预测准确率，持仓月数/总月数，贡献收益
+    from utils_eda import get_ori_id, get_info, get_ori_name
+    asset_ids = [get_ori_id(y_ret.columns[asset_num]) for asset_num in range(0,10)]
+    asset_names = [get_ori_name(asset_id, get_info()) for asset_id in asset_ids]
+    df_asset_stats = pd.DataFrame(index=asset_names, columns=['预测准确率', '持仓月数占比', '贡献收益(单利)'])
+
+    score_df = pd.DataFrame()
+    for i in score_list:
+        score_df = pd.concat([score_df, pd.Series(i)], axis=1)
+    avg_list = []
+    for id, row in score_df.iterrows():
+        avg_list.append(row.mean())
+    df_asset_stats['预测准确率'] = np.array(avg_list)
+
+    conti_port_pos = pd.DataFrame()
+    for i in port_pos_list:
+        conti_port_pos = pd.concat([conti_port_pos, i])
+    hold_periods = (conti_port_pos != 0).sum(axis=0)
+    df_asset_stats['持仓月数占比'] = np.array(hold_periods)/len(conti_port_pos.index)
+
+    contrib_df = conti_port_pos * y_ret.loc[conti_port_pos.index,:]
+    contrib_array = np.array(contrib_df.apply(lambda x: x.sum(),axis=0))
+    df_asset_stats['贡献收益(单利)'] = contrib_array
+
+    return df_asset_stats
